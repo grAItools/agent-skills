@@ -26,8 +26,23 @@ proposing a location when no convention exists.
 
 ## Using the skills
 
-Copy (or symlink) a skill's folder into wherever your agent discovers skills. For
-example:
+### Claude Code plugin (recommended)
+
+The repository is an installable Claude Code plugin. From within Claude Code:
+
+```
+/plugin marketplace add grAItools/agent-skills
+/plugin install graitools@graitools
+```
+
+All skills are installed at once and appear namespaced as
+`graitools:<skill-name>` (e.g. `graitools:implementing-code`). Updates arrive
+via `/plugin marketplace update graitools`.
+
+### Manual copy
+
+Alternatively, copy (or symlink) a skill's folder into wherever your agent
+discovers skills. For example:
 
 - **Claude Code** — `.claude/skills/<skill-name>/` in a project, or
   `~/.claude/skills/<skill-name>/` to make it available in every project.
@@ -35,7 +50,7 @@ example:
   folder from its configured skills directory; check your agent's documentation.
 
 To take everything at once, copy the contents of `skills/` into your agent's skills
-directory.
+directory. Manually copied skills keep their plain names (no `graitools:` prefix).
 
 ## Contributing
 

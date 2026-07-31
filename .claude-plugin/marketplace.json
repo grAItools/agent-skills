@@ -1,0 +1,24 @@
+{
+  "name": "graitools",
+  "owner": {
+    "name": "grAItools",
+    "url": "https://github.com/grAItools"
+  },
+  "description": "grAItools agent skills as an installable Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "graitools",
+      "source": "./",
+      "description": "SDLC agent skills: requirements, architecture, implementation, review & test.",
+      "category": "engineering",
+      "keywords": [
+        "skills",
+        "sdlc",
+        "requirements",
+        "architecture",
+        "code-review",
+        "testing"
+      ]
+    }
+  ]
+}
