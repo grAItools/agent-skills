@@ -1,7 +1,7 @@
 {
   "name": "graitools",
-  "version": "1.0.0",
-  "description": "SDLC agent skills: requirements, architecture, implementation, review & test.",
+  "version": "2.0.0",
+  "description": "Development-cycle agent skills: discover, design, implement, verify, deliver — wrapped in continuous refactoring.",
   "author": {
     "name": "grAItools"
   },
@@ -11,8 +11,12 @@
     "skills",
     "sdlc",
     "requirements",
+    "design",
     "architecture",
+    "implementation",
+    "testing",
     "code-review",
-    "testing"
+    "refactoring",
+    "delivery"
   ]
 }

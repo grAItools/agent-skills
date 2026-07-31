@@ -1,17 +1,17 @@
 ---
-name: implementing-code
-description: Use when writing or modifying source code — implementing a planned feature, fixing a defect, refactoring, or extending an existing codebase — to produce code that is correct, obvious to readers, and safe to change.
+name: implementing-strategically
+description: Use when writing or modifying source code — building a planned feature, fixing a defect, or extending an existing codebase — and especially when schedule pressure invites taking the fastest change that appears to work.
 ---
 
-# Implementing Code
+# Implementing Strategically
 
 ## Overview
 
-Working code isn't enough. Every change either improves or degrades the design, and complexity accumulates in small, individually defensible steps — so the finish line is "the design is good *and* it works," never just "it works." Program strategically: invest continually in structure, comments, and tests as part of every task, not as cleanup deferred to a mythical quiet week. Optimize for the reader: code is read far more often than written, and its clarity is judged by readers, not by its author.
+Coding is continuous decision-making, not transcription of a design — and working code isn't enough. Every change either improves or degrades the design, and complexity accumulates in small, individually defensible steps that are nearly impossible to remove later — so the finish line is "the design is good *and* it works," never just "it works." Program strategically: invest roughly 10–20% of every coding task in structure, comments, and tests as you go, not as cleanup deferred to a mythical quiet week. Optimize for the reader: code is read far more often than written, and its clarity is judged by readers, not by its author.
 
 ## When to Use
 
-Any time you write or modify production code: features, bug fixes, refactors, extensions. For designing the structure first, use a design skill; for verifying the result, use a review skill.
+Any time you write or modify production code: features, bug fixes, refactors, extensions — and especially the moment you notice yourself reaching for the quickest thing that could work. For designing the structure first, use a design skill; for verifying the result, use a review skill.
 
 ## Before Writing
 
@@ -19,6 +19,10 @@ Any time you write or modify production code: features, bug fixes, refactors, ex
 - **When in Rome.** Before deciding anything in an existing codebase, look for the established convention — names, style, interfaces, error handling, test placement — and follow it. Don't "improve" a convention unless you are prepared to migrate every existing use; local inconsistency costs more than the improvement is worth.
 - **Ask what the design should be.** Given the new requirement, what structure would this code have if it had been designed with the change in mind from the start? Refactor toward that, then make the change — rather than bolting the feature onto the old shape. The unit of growth is an abstraction, not a feature.
 - **Don't program by coincidence.** Rely only on documented behavior of libraries and APIs. If something works and you don't know why, stop and find out — it may not really work. Document any assumption you are forced to make, and back it with an assertion.
+
+## Start With a Thin Slice
+
+For work spanning several parts, get a tracer bullet working first: every architectural piece present and connected, each doing a trivial version of its job — written for keeps, with real structure and error handling, just not fully functional yet. Base the slice on the riskiest, most central part of the problem, not an easy peripheral one; if an interface design already exists, the slice is its thinnest end-to-end implementation — the design's first test, not a rival to it. Then flesh out the parts in parallel, keeping every intermediate state complete and consistent.
 
 ## Interfaces and Comments First
 
@@ -47,6 +51,7 @@ Write the interface before the body: the signature plus a comment stating the ab
 | Make the common case simple | Defaults for everything; rare options invisible to those who don't need them |
 | Choose representations that erase edge cases | e.g. an empty range instead of a "no selection" flag — the normal-case code then handles the edges |
 | Composition over implementation inheritance | Inherit interfaces for polymorphism; reuse implementation via helpers, not base-class entanglement |
+| Volatile details in configuration | Business policy, tunable choices, environment specifics live in configuration or data; code the general case |
 
 ## Defensive Discipline
 
@@ -59,7 +64,7 @@ Write the interface before the body: the signature plus a comment stating the ab
 
 ## Tests With the Code
 
-- Write the test with (or before) the code, against the contract: does the routine do what it promises, over the full range including boundaries? Testing against the contract also tests whether the contract means what you think.
+- Write the test with (or before) the code, against the contract: does the routine do what it promises, over the full range including boundaries? Exercising the interface from the caller's side is design feedback in itself — and testing against the contract also tests whether the contract means what you think.
 - Prefer covering meaningful *states* — boundaries, emptiness, overflow, ordering, concurrency — over merely executing lines.
 - Every test must run with one command, and the full suite with every build. Coding isn't done until all the tests run.
 - When fixing a bug, first write a failing test that reproduces it, then fix. Once a human finds a bug, a test finds it forever after.
@@ -92,9 +97,19 @@ Write the interface before the body: the signature plus a comment stating the ab
 ## Red Flags — Stop and Reconsider
 
 - "It works, ship it" — without knowing *why* it works.
-- Copy-pasting a block and editing it slightly.
+- Copy-pasting a block and editing it slightly; a constant hard-coded a second time.
 - A comment that repeats the code, or a comment you struggled to write simply.
 - A function you can't name precisely.
 - Catch blocks that log-and-continue past states the program can't actually handle.
 - A test that needs elaborate setup of unrelated subsystems.
-- "I'll clean it up after the deadline" — there is always another deadline.
+- An assertion disabled, or a test skipped, to get to green.
+- A commit containing code you don't fully understand.
+
+## Common Rationalizations
+
+| Excuse | Reality |
+|---|---|
+| "Deadline — hack now, refactor later" | Later never comes; the debt compounds and is repaid with interest. There is always another crunch. |
+| "It passes, ship it" | Coincidental correctness fails unpredictably. Know *why* it works. |
+| "Tests slow me down" | Untested code isn't done, and debugging without tests is slower than writing them. |
+| "This duplication is just this once" | It's not whether you'll forget to update the second copy — it's when. |

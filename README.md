@@ -9,20 +9,26 @@ layout and depend on nothing outside their own folder.
 
 ## Skills
 
-The current set covers the main software development life cycle tasks:
+The current set covers the development cycle — **discover → design → implement →
+verify → deliver**, wrapped in **continuous refactoring**:
 
 | Skill | Phase | Use when |
 |---|---|---|
-| [gathering-requirements](skills/gathering-requirements/SKILL.md) | Requirements & analysis | A new idea, need, defect, or vague request must become an explicit, agreed specification |
-| [designing-architecture](skills/designing-architecture/SKILL.md) | Design | Agreed requirements need a technical design / implementation plan, or an architecture needs evaluating |
-| [implementing-code](skills/implementing-code/SKILL.md) | Implementation | Writing or modifying source code: features, fixes, refactors |
-| [reviewing-and-testing](skills/reviewing-and-testing/SKILL.md) | Review & test | Verifying an implementation against its intent and judging or building its tests |
+| [discovering-requirements](skills/discovering-requirements/SKILL.md) | Discover | A new feature, defect report, or vague request needs its purpose, users, and scope dug out before any design or coding |
+| [designing-before-coding](skills/designing-before-coding/SKILL.md) | Design | Choosing module boundaries, interfaces, data models, or system structure — or evaluating an existing architecture |
+| [implementing-strategically](skills/implementing-strategically/SKILL.md) | Implement | Writing or modifying source code — especially when schedule pressure invites the fastest change that appears to work |
+| [verifying-changes](skills/verifying-changes/SKILL.md) | Verify | Work is believed complete, a diff or design needs review, or "all tests pass" is being weighed as enough to ship |
+| [delivering-for-feedback](skills/delivering-for-feedback/SKILL.md) | Deliver | A working increment exists and release timing is in question, or development has run for weeks without user contact |
+| [refactoring-continuously](skills/refactoring-continuously/SKILL.md) | Ongoing | Touching existing code, a small change fans out into many edits, or an area keeps breaking or resisting new requirements |
 
-The SDLC skills chain naturally — spec → design → code → review — with each stage's
-output (a spec, a plan, a change, a review report) feeding the next. Each skill also
-stands alone: use whichever matches the task at hand. Where a skill produces a
-document, it stores it wherever the host project keeps such documents, asking or
-proposing a location when no convention exists.
+The phases chain naturally — each stage's output (a spec, a plan, a change, a
+review report, a release) feeds the next — but they interpenetrate (a spiral, not
+a waterfall): requirements are discovered by designing and shipping, design
+continues during implementation, testing begins before coding, and each release
+restarts the loop. Each skill also stands alone: use whichever matches the task
+at hand. Where a skill produces a document, it stores it wherever the host
+project keeps such documents, asking or proposing a location when no convention
+exists.
 
 ## Using the skills
 
@@ -36,7 +42,7 @@ The repository is an installable Claude Code plugin. From within Claude Code:
 ```
 
 All skills are installed at once and appear namespaced as
-`graitools:<skill-name>` (e.g. `graitools:implementing-code`). Updates arrive
+`graitools:<skill-name>` (e.g. `graitools:implementing-strategically`). Updates arrive
 via `/plugin marketplace update graitools`.
 
 ### Manual copy

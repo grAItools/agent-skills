@@ -1,13 +1,13 @@
 ---
-name: designing-architecture
-description: Use when deciding how to build something — turning agreed requirements into a software design or implementation plan, choosing module boundaries, interfaces, data models, or system structure, or evaluating an existing architecture.
+name: designing-before-coding
+description: Use when deciding how to build something — choosing module boundaries, interfaces, data models, or system structure — after the need is understood and before writing production code, when a change calls for a new abstraction rather than a bolt-on, or when evaluating an existing architecture.
 ---
 
-# Designing Architecture
+# Designing Before Coding
 
 ## Overview
 
-Complexity is the single enemy of software design: anything about a system's structure that makes it hard to understand and modify. It is caused by dependencies and obscurity, it is felt by readers rather than writers, and it accumulates incrementally — so it must be fought in every decision, however small. Design is iterative discovery, not plan execution: goals, constraints, and the best structure are found *while* designing, so the process must expect and welcome revisions to its own premises.
+Complexity is the single enemy of software design: anything about a system's structure that makes it hard to understand and modify. It is caused by dependencies and obscurity, it is felt by readers rather than writers, and it accumulates incrementally — so it must be fought in every decision, however small. The unit of development is an **abstraction, not a feature**: when a feature needs a new abstraction, design it cleanly and somewhat general-purpose all at once, rather than bolting the feature on. Design is iterative discovery, not plan execution — goals, constraints, and the best structure are found *while* designing, the first idea is rarely the best, and design time is repaid many times over in implementation and rework saved.
 
 The output of this skill is a design/plan document good enough that someone else could implement it — with the reasoning preserved.
 
@@ -15,9 +15,10 @@ The output of this skill is a design/plan document good enough that someone else
 
 - An agreed set of requirements needs a technical design or implementation plan.
 - Choosing module boundaries, interfaces, data models, layering, or inter-service relationships.
+- An existing structure must change to accommodate a feature.
 - A "how should we build this?" question, or an architecture review.
 
-Do not use when requirements are still unclear (establish those first) or for trivial changes with no structural choices.
+Do not use when requirements are still unclear (establish those first) or for trivial changes that fit the existing design cleanly — but decide that consciously, don't assume it.
 
 ## Before Designing
 
@@ -38,11 +39,12 @@ For every significant decision — decomposition, interface, data model — sket
 - Performance headroom and implementation cost.
 - How each would absorb the changes you can foresee.
 
-Even when the first idea wins, the comparison teaches you *why* — and when all alternatives look bad, their shared problems point to a better third design. Skipping this step because the first idea "seems obviously right" is how hard problems defeat smart people. Record the losing alternatives and the reasons; the rationale is part of the design.
+Even when the first idea wins, the comparison teaches you *why* — and when all alternatives look bad, their shared problems point to a better third design. Skipping this step because the first idea "seems obviously right" is how hard problems defeat smart people. Scale the effort to the decision's blast radius — an hour or two for a class, more for a system boundary; the comparison is the point, not polish. Record the losing alternatives and the reasons; the rationale is part of the design.
 
 ## Module Design Rules
 
 - **Make modules deep.** A module's benefit is its functionality; its cost to the system is its interface. Aim for simple interfaces hiding substantial implementations. An interface barely simpler than its implementation adds cost without benefit.
+- **Write interface contracts before bodies.** Class and operation descriptions, preconditions, postconditions, invariants — written before any implementation exists. If a simple, complete description is hard to write, the design is wrong; fix the design, not the wording.
 - **Hide information.** Each module should encapsulate design decisions — formats, algorithms, assumptions — that appear nowhere in its interface, so the decision can change without touching other modules. Never return or accept internal data structures across an interface.
 - **Decompose by knowledge, not by execution order.** Structure that mirrors "first read, then parse, then write" spreads the same knowledge across several places. Group code by what it *knows*, and the order of operations takes care of itself.
 - **Make interfaces somewhat general-purpose.** The implementation serves today's need; the interface should serve a class of needs. A public method designed for exactly one call site is a warning. But don't over-generalize: if callers need lots of wrapper code, the interface is too low-level.
@@ -76,12 +78,12 @@ Error handling is a disproportionate source of complexity and production failure
 
 - **Prototype to learn.** For anything risky, unproven, or uncomfortable — an algorithm, a third-party dependency, a performance question — build a small throwaway spike that answers the specific question. Its value is the lesson, not the code; label it disposable and never ship it.
 - **Build a tracer skeleton.** For a new system, get a thin end-to-end slice working early: every architectural component present and connected, each doing a trivial version of its job. Unlike a prototype, this skeleton is written to production standard and kept — it becomes the frame everything else fills in, an always-working integration platform, and proof the architecture holds together. Keep every intermediate state complete and consistent.
-- **Walk the scenarios.** Run every known usage scenario through the proposed design on paper before coding. Re-walk them after each design change. A scenario that won't flow cleanly is a design defect found at the cheapest possible time.
+- **Walk the scenarios.** Run every known usage scenario through the proposed design on paper before coding — including low-frequency ones; they surface requirements and flaws nothing else will. Re-walk them after each design change. A scenario that won't flow cleanly is a design defect found at the cheapest possible time.
 - **Design for testability.** If you cannot describe how a module will be tested in isolation, it is too coupled. Testability pressure is a cheap, honest probe of decoupling.
 
 ## Conceptual Integrity and Rationale
 
-- A coherent design reflects one set of consistent decisions. Give the design a single owner (or a tightly aligned pair) with real authority over it; negotiation among many peers produces bloated committee designs where nobody says no. Collaborate hard on exploration and on review — but let the design itself flow from one mind.
+- A coherent design reflects one set of consistent decisions. Give the design a single owner (or a tightly aligned pair) with real authority over it; negotiation among many peers produces bloated committee designs where nobody says no. Collaborate hard on exploration and on review — but let the design itself flow from one mind. (Working solo, this is automatic — the rule forbids design-by-committee; it doesn't require a committee.)
 - Consistency is the deepest form of quality: given partial knowledge of the system, a reader should be able to predict the rest. Apply three tests to every addition: does it link things that are independent (breaks orthogonality)? does it introduce anything immaterial to the need (breaks propriety)? does it restrict something inherently general (breaks generality — when you don't know how it will be used, grant freedom)?
 - Beware imposed simplicity below the task's inherent complexity — the complexity will break out elsewhere as jury-rigged workarounds. Match the design's expressive power to the real problem.
 - **Record the whys.** For every major decision, write down what was chosen, what was rejected, and why. Maintainers who don't know why a stone is load-bearing will remove it.
@@ -98,7 +100,7 @@ Produce a design/plan document (store it wherever the project keeps such documen
 6. **Implementation order** — steps sized for independent verification, starting with a tracer skeleton through the core; least-reversible decisions earliest.
 7. **Test strategy** — how each part will be verified against its contract.
 
-Mark the plan READY only when the risky assumptions have been tested and the scenarios walk cleanly through the design.
+Mark the plan READY only when the risky assumptions have been tested and the scenarios walk cleanly through the design. Scale the document to the decision's blast radius — a design note can be enough for a class; a system boundary deserves the full structure.
 
 ## Red Flags
 
@@ -110,6 +112,8 @@ Mark the plan READY only when the risky assumptions have been tested and the sce
 | Common operations force awareness of rare features | Overexposure; split or default the rare parts |
 | Method that only forwards to a similar method | Responsibility boundary in the wrong place |
 | General mechanism containing code for one specific use | Special–general mixture; push the specifics up |
+| Configuration parameter punting a decision the module could make | Complexity exported upward; pull it down |
+| Committing to the first sketch without a rival | Design-it-twice skipped; you don't know why this design wins |
 | One model silently spanning two teams or subsystems | Unmapped context boundary; expect false cognates |
 | Entities as data bags, logic all in services | Anemic model; behavior belongs with the data |
 | Business rule visible only as a buried conditional | Implicit concept; name it and promote it |
@@ -117,3 +121,12 @@ Mark the plan READY only when the risky assumptions have been tested and the sce
 | Requirements only expressible awkwardly in the model | Listen to the awkwardness; a concept is missing |
 | Design proceeding on unspoken user assumptions | Vague user model; write it down, even wrong |
 | A constraint nobody has re-validated | Possibly obsolete; sometimes removing it is the breakthrough |
+
+## Common Rationalizations
+
+| Excuse | Reality |
+|---|---|
+| "No time to design twice" | A second sketch costs an hour or two against weeks of implementation. |
+| "We'll generalize it later" | The implementation can stay specific; the interface is what must not be. |
+| "It's a small feature, no design needed" | Complexity is incremental; small bolt-ons are exactly how systems rot. |
+| "The requirements force this design" | Requirements state needed properties, never implementations. Push back on how-constraints. |

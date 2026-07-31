@@ -14,7 +14,7 @@ skills/
 ```
 
 - The folder name is the skill name: short, kebab-case, verb-led where possible
-  (`gathering-requirements`, not `requirements`).
+  (`discovering-requirements`, not `requirements`).
 - `SKILL.md` starts with YAML frontmatter containing exactly the fields the open
   format defines — at minimum:
 
