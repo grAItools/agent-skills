@@ -1,6 +1,7 @@
 ---
 name: discovering-requirements
-description: Use when starting work on a new feature, product idea, defect report, or vague request — before any design or coding — or when a request's purpose, users, or scope are unclear, contested, or stated as a solution ("add a button", "we need a dashboard") rather than as a need.
+description: Elicits and specifies the real need behind a request — interrogating solution-shaped asks for the underlying goal, building a domain glossary, writing weighted goal-driven use cases, and naming constraints and the scarce resource. Use when a new feature, product idea, defect report, or vague request arrives whose purpose, users, or scope are unclear or contested, or that is stated as a solution ("add a button", "we need a dashboard") rather than as a need, and before design or coding starts on it. Do not use when requirements are already agreed and written down; go straight to design or implementation.
+license: MIT
 ---
 
 # Discovering Requirements
@@ -16,9 +17,9 @@ A requirement is a statement of something that needs to be accomplished. It is n
 - A new feature idea, product concept, or "what if we..." conversation.
 - A defect or pain report whose underlying need is unclear, or that implies a behavior change (what *should* it do, and for whom?).
 - A request that arrives as a solution ("add a button that...", "we need a dashboard") rather than as a need.
-- Before writing any design or plan for non-trivial work.
+- Before design or coding starts on work whose need is not yet pinned down.
 
-Do not use for mechanical, fully specified changes (rename X, bump a version) where the need is unambiguous — though even then, state the why in one sentence.
+Do not use when the requirements are already agreed and written down — go straight to design or implementation. Nor for mechanical, fully specified changes (rename X, bump a version) where the need is unambiguous — though even then, state the why in one sentence.
 
 ## How to Work
 

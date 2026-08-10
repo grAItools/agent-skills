@@ -1,0 +1,51 @@
+name: Validate skills
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Pinned deliberately: the reference validator gains checks between
+      # releases, and an unpinned bump would fail unrelated pull requests.
+      # PyYAML is pinned for the same reason — the house linter reads
+      # frontmatter with it rather than with a regex.
+      - name: Install the Agent Skills reference validator
+        run: pip install "skills-ref==0.1.1" "PyYAML==6.0.2"
+
+      # Invoked as a module rather than by name so the job does not depend on
+      # console-script shims landing on PATH.
+      - name: Validate against the open format
+        run: |
+          status=0
+          for dir in skills/*/; do
+            python -m skills_ref.cli validate "$dir" || status=1
+          done
+          exit $status
+
+      # The gates are only worth their green tick if they still reject what
+      # they claim to reject.
+      - name: Test the checks themselves
+        run: python3 scripts/test_checks.py
+
+      - name: Check the description contract
+        run: python3 scripts/lint_skills.py skills
+
+      # Every skill folder must stand alone: the README tells people to copy a
+      # single folder into their agent's skills directory, so a cross-skill or
+      # repo-root relative link would arrive broken.
+      - name: Check skills are self-contained
+        run: python3 scripts/check_self_contained.py skills
