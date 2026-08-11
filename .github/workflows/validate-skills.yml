@@ -15,61 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      # Pinned deliberately: the reference validator gains checks between
-      # releases, and an unpinned bump would fail unrelated pull requests.
-      # PyYAML is pinned for the same reason — the house linter reads
-      # frontmatter with it rather than with a regex.
-      - name: Install the Agent Skills reference validator
-        run: pip install "skills-ref==0.1.1" "PyYAML==6.0.2"
-
-      # Invoked as a module rather than by name so the job does not depend on
-      # console-script shims landing on PATH.
-      - name: Validate against the open format
-        run: |
-          status=0
-          for dir in skills/*/; do
-            python -m skills_ref.cli validate "$dir" || status=1
-          done
-          exit $status
-
-      # The gates are only worth their green tick if they still reject what
-      # they claim to reject.
-      - name: Test the checks themselves
-        run: python3 scripts/test_checks.py
-
-      - name: Check the description contract
-        run: python3 scripts/lint_skills.py skills
-
-      # Every skill folder must stand alone: the README tells people to copy a
-      # single folder into their agent's skills directory, so a cross-skill or
-      # repo-root relative link would arrive broken.
-      - name: Check skills are self-contained
-        run: python3 scripts/check_self_contained.py skills
-
-      # The name, description and keywords are written down in both plugin
-      # manifests, so an edit to one drifts silently from the other.
-      - name: Check the plugin manifests
-        run: python3 scripts/check_manifest.py .
-
-  # A second opinion from a tool nobody here maintains: it reads the same
-  # folders against the published specification and its own house rules, and
-  # catches classes of problem the gates above do not look for — leaked secrets,
-  # oversized assets, unresolved heading anchors. Advisory on purpose: its
-  # warnings are opinions this repository has not agreed to, and a pull request
-  # should not fail on someone else's opinion. Read the log, then decide.
-  advisory:
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-
       - uses: astral-sh/setup-uv@v5
 
-      # Pinned for the same reason as the validator above: a linter that gains
-      # checks between releases would fail pull requests that changed nothing.
-      - name: Lint against the published specification
-        run: uvx skillscheck@0.9.5 . --format json
+      # The same script a contributor runs. Nothing is validated here that
+      # cannot be reproduced with one command locally, and the versions of the
+      # validators are pinned inside it rather than in this file.
+      - name: Validate skills
+        run: scripts/check.sh
