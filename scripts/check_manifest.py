@@ -180,6 +180,16 @@ def check_source(entry: dict, root: Path) -> list[str]:
         ]
 
     resolved = (root / source).resolve()
+    # Resolved, then confined. `../outside`, an absolute path, or a symlink out of
+    # the tree all resolve to somewhere real, and would pass on the strength of a
+    # directory this repository does not ship — while the gate claims to be
+    # checking this repository's packaging.
+    top = root.resolve()
+    if top != resolved and top not in resolved.parents:
+        return [
+            f"{MANIFEST_DIR}/{MARKETPLACE}: `source` {source!r} resolves outside the "
+            "repository, so it is not this repository's packaging to vouch for"
+        ]
     if not resolved.is_dir():
         return [f"{MANIFEST_DIR}/{MARKETPLACE}: `source` {source!r} does not resolve to a directory"]
 

@@ -49,6 +49,11 @@ DESTINATION_END = " \t\n"
 # A URI scheme: `https://`, but also `mailto:` and any casing of either.
 SCHEME = re.compile(r"\A[A-Za-z][A-Za-z0-9+.\-]*:")
 
+# `file:` is a scheme, but it names a path on the reader's own disk rather than
+# something on the network, so exempting it would exempt the one kind of absolute
+# dependency this check exists to catch.
+LOCAL_SCHEME = re.compile(r"\Afile:", re.I)
+
 
 def is_escaped(text: str, i: int) -> bool:
     """Whether the character at `i` is preceded by an odd number of backslashes."""
@@ -69,9 +74,12 @@ def blank_code_spans(text: str) -> str:
     to the scanner below, which then failed the skill for quoting it. Runs that
     never find a matching partner are literal backticks, not an opening.
 
-    A backslash-escaped backtick is a literal character and cannot delimit a
-    span: `` \`[x](../other/SKILL.md)\` `` renders as an active link, so pairing
-    those ticks would blank a real cross-folder dependency and let it through.
+    A backslash-escaped backtick cannot *open* a span: `` \`[x](../other/SKILL.md)\` ``
+    renders as an active link, so pairing those ticks would blank a real
+    cross-folder dependency and let it through. The same test is deliberately not
+    applied to the closing run — escapes stop meaning anything once a span has
+    opened, so a backtick after a backslash does close it, and treating that as
+    literal left real spans unblanked and the links inside them reported.
 
     Newlines survive so the caller can still count lines, and so a span that
     closes on a later line blanks what a Markdown reader would too.
@@ -88,7 +96,7 @@ def blank_code_spans(text: str) -> str:
         closing = None
         j = opening.end()
         while j < len(text):
-            if text[j] != "`" or is_escaped(text, j):
+            if text[j] != "`":
                 j += 1
                 continue
             candidate = BACKTICKS.match(text, j)
@@ -163,6 +171,33 @@ def clean_target(raw: str) -> str | None:
     return unquote(ESCAPED_PAREN.sub(r"\1", target))
 
 
+def opens_a_label(text: str, close: int) -> bool:
+    """Whether the `]` at `close` closes a link label that a reader would see.
+
+    A destination only depends on a file if something opens the label in front of
+    it. `\\[x](target)` and a bare `](target)` in prose render no link, so
+    reading a dependency out of either reports one that does not exist.
+
+    Scanned backwards for an unescaped `[`, stepping over escaped brackets, which
+    are ordinary text inside a label. An unescaped `]`, a blank line, or the start
+    of the file means the label was never opened. This is bounded on purpose: it
+    resolves one bracket rather than parsing nesting, because the risk to weigh is
+    a false negative — an unchecked cross-folder link — and less machinery is less
+    to get wrong.
+    """
+    if is_escaped(text, close):
+        return False  # an escaped `]` closes nothing
+    i = close - 1
+    while i >= 0:
+        ch = text[i]
+        if ch in "[]" and not is_escaped(text, i):
+            return ch == "["
+        if ch == "\n" and i > 0 and text[i - 1] == "\n":
+            return False  # a label does not survive a blank line
+        i -= 1
+    return False
+
+
 def read_destination(text: str, i: int) -> str | None:
     """The destination of an inline link whose `](` ends at `i`, or None if unclosed.
 
@@ -232,9 +267,7 @@ def inline_link_targets(text: str) -> list[tuple[int, str]]:
     """Every inline-link destination, with the line its link starts on."""
     found: list[tuple[int, str]] = []
     for m in INLINE_LINK_OPEN.finditer(text):
-        # An escaped `]` closes no label, so `\[x\](target)` renders as the text
-        # of a link rather than a link, and its target is not a dependency.
-        if is_escaped(text, m.start()):
+        if not opens_a_label(text, m.start()):
             continue
         destination = read_destination(text, m.end())
         if destination is not None:
@@ -264,9 +297,12 @@ def check_file(md: Path, skill_dir: Path) -> list[str]:
         target = clean_target(raw)
         if target is None:
             continue
+        where = f"{md}:{line}"
+        if LOCAL_SCHEME.match(target):
+            problems.append(f"{where}: links outside its own folder: {target}")
+            continue
         if SCHEME.match(target) or target.startswith("//"):
             continue  # external URL, mailto:, protocol-relative
-        where = f"{md}:{line}"
         if os.path.isabs(target) or target.startswith("/"):
             problems.append(f"{where}: links outside its own folder: {target}")
             continue

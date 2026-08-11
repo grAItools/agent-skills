@@ -23,7 +23,8 @@ it when a description changes, and from the `Trigger eval` workflow on demand.
 Usage:  python3 scripts/run_trigger_eval.py [--skills DIR] [--corpus FILE]
                                             [--model ID] [--effort LEVEL]
                                             [--threshold FLOAT] [--case ID]
-Exit:   0 both rates at or above the threshold, 1 otherwise, 2 on bad usage.
+Exit:   0 both rates at or above the threshold, 1 otherwise or if any case could
+        not be evaluated at all, 2 on bad usage.
 """
 
 from __future__ import annotations
@@ -344,6 +345,7 @@ def main(argv: list[str] | None = None) -> int:
 
     client = anthropic.Anthropic()
     scored: list[tuple[Case, Result]] = []
+    unevaluated = 0
 
     for i, case in enumerate(cases, 1):
         try:
@@ -351,6 +353,7 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as exc:  # one bad call should not lose the whole run
             print(f"FAIL {i:>3}  {case.prompt[:60]!r}\n       - {exc}")
             scored.append((case, Result(False, False, str(exc))))
+            unevaluated += 1
             continue
 
         result = score(case, selected)
@@ -369,6 +372,16 @@ def main(argv: list[str] | None = None) -> int:
     print(f"disjointness  {disjoint}/{disjoint_total}  ({disjoint_rate:.0%})")
     print(f"{len(cases)} cases, each scored only where it asserts")
     print(f"model {args.model} at effort {args.effort}")
+
+    # A call that never happened is not a routing miss, and a rate is the wrong
+    # instrument for it: one broken call out of the shipped corpus still leaves
+    # both rates above 90%, so the workflow would go green on an eval that did
+    # not run. Inconclusive is its own outcome, and it is not success.
+    if unevaluated:
+        print()
+        print(f"{unevaluated} of {len(cases)} cases could not be evaluated, so the "
+              "rates above are measured over an incomplete run.")
+        return 1
 
     if routing_rate < args.threshold or disjoint_rate < args.threshold:
         print()

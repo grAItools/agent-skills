@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 
@@ -242,6 +243,31 @@ class TestSelfContainment(Case):
         self.skill("s", "# S\n\nNever write \\[config\\](../shared/config.md) in a skill.\n")
         self.assertAccepts(SELF_CONTAINED)
 
+    def test_accepts_a_link_whose_opening_bracket_alone_is_escaped(self) -> None:
+        r"""Escaping `\[` is enough to stop a link rendering, so nothing is depended on."""
+        self.skill("s", "# S\n\nNever write \\[config](../shared/config.md) in a skill.\n")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_accepts_a_bare_destination_that_opens_no_label(self) -> None:
+        """Prose containing `](x)` with no `[` in front of it renders no link."""
+        self.skill("s", "# S\n\nA stray ](../shared/config.md) sequence in prose.\n")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_still_rejects_a_real_link_after_the_bracket_check(self) -> None:
+        """The bracket check must not become a way past the gate."""
+        self.skill("s", "# S\n\nSee [config](../shared/config.md) for more.\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
+    def test_accepts_a_code_span_closed_by_a_backtick_after_a_backslash(self) -> None:
+        """Escapes stop applying once a span opens, so that backtick does close it."""
+        self.skill("s", "# S\n\nNever write `[x](../other/SKILL.md)\\` in a skill.\n")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_rejects_a_file_url(self) -> None:
+        """A scheme, but one naming the reader's own disk rather than the network."""
+        self.skill("s", "# S\n\n[x](file:///etc/config)\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
     def test_accepts_a_footnote_definition(self) -> None:
         """`[^1]: ...` is a GFM footnote, not a reference definition to a file."""
         self.skill("s", "# S\n\nA claim.[^1]\n\n[^1]: Explanation of the constraint\n")
@@ -379,6 +405,18 @@ class TestPluginManifests(ManifestCase):
         self.marketplace["plugins"][0]["source"] = "./empty"
         self.write()
         self.assertRejects("no skills")
+
+    def test_rejects_a_source_resolving_outside_the_repository(self) -> None:
+        """`../outside` resolves to somewhere real that this repository does not ship."""
+        outside = self.root.parent / f"{self.root.name}-outside" / "skills" / "s"
+        outside.mkdir(parents=True)
+        (outside / "SKILL.md").write_text("---\nname: s\n---\n", encoding="utf-8")
+        self.marketplace["plugins"][0]["source"] = f"../{self.root.name}-outside"
+        self.write()
+        try:
+            self.assertRejects("resolves outside the repository")
+        finally:
+            shutil.rmtree(outside.parent.parent, ignore_errors=True)
 
     def test_rejects_a_remote_source_rather_than_assuming_it_is_good(self) -> None:
         """A check that cannot run should say so, not return clean."""
@@ -636,6 +674,41 @@ class TestTriggerCorpus(unittest.TestCase):
         path = self.corpus({"prompt": "p", "fires": "refactoring-continuously", "silent": []})
         with self.assertRaises(self.mod.CorpusError):
             self.mod.load_corpus(path, self.known)
+
+    def test_a_call_that_never_happened_makes_the_run_inconclusive(self) -> None:
+        """Ten of eleven cases pass at 91%, so a rate cannot notice the missing one.
+
+        A failed call is an unevaluated case, not evidence about a description.
+        """
+        def reply(text: str) -> object:
+            block = type("Block", (), {"type": "text", "text": text})()
+            return type("Reply", (), {"stop_reason": "end_turn", "content": [block]})()
+
+        class Client:
+            class messages:
+                @staticmethod
+                def create(**kw: object) -> object:
+                    if "boom" in kw["messages"][0]["content"]:
+                        raise RuntimeError("503 from the API")
+                    return reply('["refactoring-continuously"]')
+
+        cases = [{"prompt": f"case {n}", "fires": ["refactoring-continuously"],
+                  "silent": []} for n in range(10)]
+        cases.append({"prompt": "boom", "fires": ["refactoring-continuously"], "silent": []})
+
+        fake = types.ModuleType("anthropic")
+        fake.Anthropic = lambda *a, **k: Client()
+        sys.modules["anthropic"] = fake
+        try:
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                code = self.mod.main(["--skills", str(self.skills_dir()),
+                                      "--corpus", str(self.corpus(*cases))])
+        finally:
+            del sys.modules["anthropic"]
+
+        self.assertIn("10/11", out.getvalue())  # 91%, above the default threshold
+        self.assertIn("could not be evaluated", out.getvalue())
+        self.assertEqual(code, 1)
 
     def test_rates_count_only_the_cases_that_assert(self) -> None:
         """A no-fire case makes no routing claim, so scoring it as one hides misses."""
