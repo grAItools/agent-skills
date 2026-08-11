@@ -1,0 +1,24 @@
+name: Validate skills
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      # The same script a contributor runs. Nothing is validated here that
+      # cannot be reproduced with one command locally, and the versions of the
+      # validators are pinned inside it rather than in this file.
+      - name: Validate skills
+        run: scripts/check.sh

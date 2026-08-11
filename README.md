@@ -1,8 +1,8 @@
 # Agent Skills
 
 A collection of portable skills for coding agents. Each skill is a self-contained
-folder under [`skills/`](skills/) with a `SKILL.md` — YAML frontmatter (`name` +
-`description`) followed by instructions — following the open
+folder under [`skills/`](skills/) with a `SKILL.md` — YAML frontmatter (`name`,
+`description`, `license`) followed by instructions — following the open
 [Agent Skills](https://agentskills.io) format, so any coding agent that supports
 agent skills can use them. Skills make no assumptions about the host repository's
 layout and depend on nothing outside their own folder.
@@ -14,12 +14,12 @@ verify → deliver**, wrapped in **continuous refactoring**:
 
 | Skill | Phase | Use when |
 |---|---|---|
-| [discovering-requirements](skills/discovering-requirements/SKILL.md) | Discover | A new feature, defect report, or vague request needs its purpose, users, and scope dug out before any design or coding |
-| [designing-before-coding](skills/designing-before-coding/SKILL.md) | Design | Choosing module boundaries, interfaces, data models, or system structure — or evaluating an existing architecture |
-| [implementing-strategically](skills/implementing-strategically/SKILL.md) | Implement | Writing or modifying source code — especially when schedule pressure invites the fastest change that appears to work |
+| [discovering-requirements](skills/discovering-requirements/SKILL.md) | Discover | A new feature, defect report, or vague request has unclear or contested purpose, users, or scope — or arrives as a solution rather than a need |
+| [designing-before-coding](skills/designing-before-coding/SKILL.md) | Design | An agreed requirement needs a technical design or plan, a change calls for a new abstraction, or a structural choice is still open |
+| [implementing-strategically](skills/implementing-strategically/SKILL.md) | Implement | Writing or modifying code to deliver a planned feature, fix, or extension — especially when schedule pressure invites the fastest change that appears to work |
 | [verifying-changes](skills/verifying-changes/SKILL.md) | Verify | Work is believed complete, a diff or design needs review, or "all tests pass" is being weighed as enough to ship |
 | [delivering-for-feedback](skills/delivering-for-feedback/SKILL.md) | Deliver | A working increment exists and release timing is in question, or development has run for weeks without user contact |
-| [refactoring-continuously](skills/refactoring-continuously/SKILL.md) | Ongoing | Touching existing code, a small change fans out into many edits, or an area keeps breaking or resisting new requirements |
+| [refactoring-continuously](skills/refactoring-continuously/SKILL.md) | Ongoing | A change fans out into edits disproportionate to it, an area keeps breaking or resisting new requirements, or its vocabulary no longer matches the domain |
 
 The phases chain naturally — each stage's output (a spec, a plan, a change, a
 review report, a release) feeds the next — but they interpenetrate (a spiral, not

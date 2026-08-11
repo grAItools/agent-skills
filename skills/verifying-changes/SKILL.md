@@ -1,6 +1,7 @@
 ---
 name: verifying-changes
-description: Use when work is believed complete — before merging, releasing, or reporting success — when reviewing someone else's diff, pull request, or design document, when planning or judging the tests for a change, or when deciding whether "all tests pass" is enough to ship.
+description: Reviews a change against its intent — layered review from requirements down to implementation, a red-flag checklist, a judgment on whether the tests are adequate, and a written review report. Use when work is believed complete and someone wants to merge, ship, or report success; when reviewing a diff, pull request, or design document, your own or someone else's; when checking an implementation against its spec; or when weighing whether "all tests pass" is enough. Do not use to write or fix the code under review; use an implementation skill.
+license: MIT
 ---
 
 # Verifying Changes
@@ -16,7 +17,7 @@ Review reports findings; it does not rewrite the work. Keep the roles separate.
 - A change is "done" and someone wants to merge, ship, or report success.
 - Reviewing a diff, branch, pull request, or design document — your own work before submitting, or someone else's.
 - Verifying an implementation against its spec or plan.
-- Designing, or judging the adequacy of, the tests for a change.
+- Judging whether the tests that came with a change are adequate. (Writing them alongside the code belongs to an implementation skill.)
 - A bug was just fixed and the temptation is to move on.
 
 ## The Reviewer's Stance
@@ -69,7 +70,7 @@ Work through these in order; each layer's findings can moot the ones below.
 
 ## Testing the Change
 
-Judge (and, when asked, build) tests along these dimensions. Climb them in order: with units verified first, an integration failure points at the integration.
+Judge tests along these dimensions. Climb them in order: with units verified first, an integration failure points at the integration. Writing the missing ones is the implementation skill's work, not this one's — name the gap and hand it back.
 
 - **Unit against contract** — each module honors its stated promises across the full input range: boundaries, empty/zero cases, maximum sizes, invalid input.
 - **Integration** — do modules honor the contracts *between* them? This is the single largest source of bugs after unit level.

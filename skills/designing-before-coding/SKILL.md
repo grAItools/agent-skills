@@ -1,6 +1,7 @@
 ---
 name: designing-before-coding
-description: Use when deciding how to build something — choosing module boundaries, interfaces, data models, or system structure — after the need is understood and before writing production code, when a change calls for a new abstraction rather than a bolt-on, or when evaluating an existing architecture.
+description: Produces a deliberate structural design (module boundaries, interfaces, data models, error behavior) by generating several alternatives, studying prior art, naming the scarce resource, and recording rationale. Use when an agreed requirement needs a technical design or implementation plan before code, when a change calls for a new abstraction rather than a bolt-on, when a feature forces an existing structure to shift, or when a structural choice is still open and its rationale needs recording. Do not use for changes that fit the existing structure, to decide what to build rather than how — use a requirements skill for that — or to judge whether a design someone has already written holds up; use a review skill for that.
+license: MIT
 ---
 
 # Designing Before Coding
@@ -16,9 +17,9 @@ The output of this skill is a design/plan document good enough that someone else
 - An agreed set of requirements needs a technical design or implementation plan.
 - Choosing module boundaries, interfaces, data models, layering, or inter-service relationships.
 - An existing structure must change to accommodate a feature.
-- A "how should we build this?" question, or an architecture review.
+- A "how should we build this?" question, or weighing an existing structure before committing to a change to it.
 
-Do not use when requirements are still unclear (establish those first) or for trivial changes that fit the existing design cleanly — but decide that consciously, don't assume it.
+Do not use when requirements are still unclear (establish those first), for trivial changes that fit the existing design cleanly, or to judge a design that is already written — a review skill owns that. But decide it consciously, don't assume it.
 
 ## Before Designing
 

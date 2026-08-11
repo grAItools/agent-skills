@@ -1,6 +1,7 @@
 ---
 name: implementing-strategically
-description: Use when writing or modifying source code — building a planned feature, fixing a defect, or extending an existing codebase — and especially when schedule pressure invites taking the fastest change that appears to work.
+description: Guides writing production code that stays workable — thin vertical slices, interfaces and comments before bodies, naming, defensive discipline, tests alongside the code, and an explicit definition of done. Use when writing or modifying code to deliver a planned feature, fix, or extension, and especially when schedule pressure invites the fastest change that appears to work. Do not use to choose the structure beforehand (use a design skill), to review a finished change (use a review skill), or for behavior-preserving cleanup (use a refactoring skill).
+license: MIT
 ---
 
 # Implementing Strategically
@@ -11,7 +12,9 @@ Coding is continuous decision-making, not transcription of a design — and work
 
 ## When to Use
 
-Any time you write or modify production code: features, bug fixes, refactors, extensions — and especially the moment you notice yourself reaching for the quickest thing that could work. For designing the structure first, use a design skill; for verifying the result, use a review skill.
+Writing or modifying production code to deliver a planned feature, fix, or extension — and especially the moment you notice yourself reaching for the quickest thing that could work.
+
+Neighbouring skills own the adjacent work: choosing the structure beforehand is a design skill, judging the finished change is a review skill, and restructuring that changes no behavior is a refactoring skill. The reshaping described below is the part that belongs to the change in hand — clearing the path for the code you are about to write, not a cleanup pass of its own.
 
 ## Before Writing
 
@@ -71,11 +74,11 @@ Write the interface before the body: the signature plus a comment stating the ab
 - Promote every useful debugging probe into the permanent suite.
 - Hard-to-test code is the design complaining: if a unit test drags in half the system, decouple before proceeding.
 
-## Modifying and Refactoring
+## Modifying Existing Code
 
-- **Fix broken windows.** Bad names, dead code, misleading comments, duplicated snippets: repair them when you find them, or visibly quarantine them — one tolerated mess licenses the next.
-- Refactor in small steps, each verified by the test suite; never mix refactoring with behavior change in the same step. No tests? Write characterization tests first.
-- Leave every file you touch a little better than you found it. If a needed refactoring is too big for now, schedule it explicitly — silent deferral is how debt becomes permanent.
+- **Fix broken windows in your path.** Bad names, dead code, misleading comments, duplicated snippets inside the code this change touches: repair them as part of the change, or visibly quarantine them — one tolerated mess licenses the next. Debt found *outside* that path is a tracked task for a refactoring skill, not scope to absorb here.
+- Reshape before adding, never at the same time: get the tests green, restructure in small verified steps, then make the behavior change as a separate step. No tests? Write characterization tests first.
+- If the reshaping the change wants is bigger than the change itself, stop and schedule it explicitly — silent deferral is how debt becomes permanent.
 - Before committing, diff-scan: every change reflected in comments and docs, no leftover debug code, no accidental behavior change.
 
 ## Performance

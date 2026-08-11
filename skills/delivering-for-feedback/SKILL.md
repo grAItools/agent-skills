@@ -1,6 +1,7 @@
 ---
 name: delivering-for-feedback
-description: Use when a working increment exists and release timing is in question, when stakeholders push to delay shipping for more polish or more features, or when development has run for weeks without contact with real users.
+description: Decides release timing and slice size for putting working software in front of real users, and plans what to observe once it is in use. Use when a working increment exists and release timing is in question, when stakeholders push to delay shipping for more polish or more features, or when development has run for weeks without contact with real users. Do not use to judge whether the change is correct or ready in quality terms; use a review skill for that.
+license: MIT
 ---
 
 # Delivering for Feedback
@@ -18,6 +19,10 @@ underlying model makes them expensive — and often politically impossible — t
 - Pressure is mounting to "finish everything first" before anyone sees it.
 - A long-running effort has had no external user contact recently.
 - Planning what to observe and measure once the software is in real use.
+
+**When not to use:** to judge whether the change is correct or ready in quality terms —
+that is a review skill's job. This skill decides *when* to ship and *how small a slice*,
+not whether the work is sound.
 
 ## The process
 

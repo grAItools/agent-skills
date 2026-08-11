@@ -1,6 +1,7 @@
 ---
 name: refactoring-continuously
-description: Use when touching existing code for any reason, when a seemingly small change requires edits in many places, when the same area keeps breaking or keeps resisting new requirements, or when code is tidy but its vocabulary no longer matches how the domain is actually discussed.
+description: Restructures existing code without changing its behavior, in small steps verified by passing tests, to pay down design debt as it is found. Use when a change fans out into edits disproportionate to the requirement, when the same area keeps breaking or keeps resisting new requirements, when an area has become one everyone is afraid to touch, or when code is tidy but its vocabulary no longer matches how the domain is discussed. Do not use as routine cleanup on every edit, as cosmetic modernization, or immediately before a release; book it as a tracked task instead.
+license: MIT
 ---
 
 # Refactoring Continuously
@@ -14,32 +15,40 @@ designed from the start with that change in mind.
 
 ## When to use
 
-- Before and during any fix or extension of existing code.
-- A change feels harder than the size of the requirement justifies.
+- A change feels harder than the size of the requirement justifies, or fans out into
+  edits disproportionate to it.
 - Recurring symptoms: un-killable bugs, "unexpected" requirements always landing in
   the same spot, code everyone is afraid to touch.
+- The code is tidy but its vocabulary no longer matches how the domain is discussed.
 
-**When not to use:** immediately before a release — don't destabilize what is about to
-ship; make the minimal safe change now and book the refactoring as a tracked task for
-right after. And never refactor as virtuosity for its own sake — refactor what
+**When not to use:** as routine cleanup on every edit — repairing the broken windows
+in the path of a change belongs to that change, and an implementation skill covers it;
+this skill is for the restructuring that is worth its own tracked task. Not immediately
+before a release either: don't destabilize what is about to ship — make the minimal
+safe change now and book the refactoring for right after. And never refactor as
+virtuosity for its own sake, or as cosmetic modernization — refactor what
 understanding has outgrown, not what merely looks old.
 
 ## The process
 
-1. **Ask first what the design *should* be** given the new requirement — the structure
-   it would have if built with this change in mind — then refactor toward that and
-   make the change, rather than patching around the misfit. Scope it to the code your
-   change actually touches — the target is the misfit in your path, not a rewrite of
-   the file. If constraints truly forbid it now, do the best possible within them and
-   schedule the deferred refactoring visibly.
+1. **Ask first what the design *should* be** given the requirement that exposed the
+   misfit — the structure the code would have if built with that change in mind — and
+   refactor toward it as its own behavior-preserving step, rather than patching around
+   the misfit. Scope it to the misfit, not a rewrite of the file. Making the behavior
+   change alongside is the implementation task and an implementation skill covers it;
+   what lands here is the restructuring. If constraints truly forbid it now, do the
+   best possible within them and schedule the deferred refactoring visibly.
 2. **Never mix refactoring with behavior change.** Have tests green before starting —
    if the code has no tests, first pin its current behavior with characterization
    tests, then move. Take small, deliberate steps (rename, move, extract); run the
    tests after each step; keep the refactoring and the feature/fix as separate
    changes.
-3. **Fix broken windows on contact:** bad names, duplication, misfit structure. If you
-   genuinely cannot fix one now, board it up visibly (a marker, a tracked task) so
-   nobody mistakes neglect for acceptance.
+3. **Name what you are repairing:** bad names, duplication, misfit structure. The
+   broken windows *in the path* of a change belong to that change, and an
+   implementation skill repairs them there; this step is for the debt beyond that
+   path, which is why it earns a task of its own. If you genuinely cannot fix a piece
+   of it now, board it up visibly (a marker, a tracked task) so nobody mistakes
+   neglect for acceptance.
 4. **Watch the deeper signals — refactor on model grounds, not just code smells:**
    - *Change amplification:* one conceptual change requires edits in many places.
    - *Wrong-model churn:* requirements that "don't fit" keep arriving at the same
