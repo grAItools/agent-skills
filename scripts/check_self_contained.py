@@ -8,9 +8,13 @@ not just `SKILL.md`, since supporting files are linked from it and travel with
 it.
 
 Link forms understood: inline `[text](target)`, reference definitions
-`[label]: target`, and raw HTML `href=`/`src=` attributes. Fenced and inline
-code is skipped, so a skill can show a forbidden link as an example without
-failing its own check.
+`[label]: target`, and raw HTML `href=`/`src=` attributes. Inline destinations
+are scanned with balanced parentheses, since `[x](a_(b).md)` is a valid link and
+stopping at the first `)` would report the file it names as missing.
+
+Fenced and inline code is skipped, so a skill can show a forbidden link as an
+example without failing its own check. Code spans are matched by backtick run
+length, the way Markdown defines them: ``a `b` c`` is one span, not two.
 
 Usage:  python3 scripts/check_self_contained.py [skills_dir]
 Exit:   0 clean, 1 violations found.
@@ -25,34 +29,96 @@ from pathlib import Path
 from urllib.parse import unquote
 
 FENCE = re.compile(r"^(?P<indent>[ \t]*)(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
-INLINE_CODE = re.compile(r"`[^`\n]*`")
+BACKTICKS = re.compile(r"`+")
 
-INLINE_LINK = re.compile(r"\]\(\s*([^)]*)\)")
+INLINE_LINK_OPEN = re.compile(r"\]\(")
 REFERENCE_LINK = re.compile(r"^[ \t]{0,3}\[[^\]]+\]:[ \t]*(\S+)", re.M)
 HTML_ATTR = re.compile(r"""\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.I)
+
+# `\(` in a destination is a literal parenthesis, not a nesting one.
+ESCAPED_PAREN = re.compile(r"\\([()])")
 
 # A URI scheme: `https://`, but also `mailto:` and any casing of either.
 SCHEME = re.compile(r"\A[A-Za-z][A-Za-z0-9+.\-]*:")
 
 
+def blank_code_spans(text: str) -> str:
+    """Replace inline code spans with spaces, leaving every newline in place.
+
+    A span opens with a run of backticks and closes with a run of exactly the
+    same length, so ``[a](b)`` is a span and the link inside it is an example
+    rather than a link. Reading only single-backtick pairs left that link visible
+    to the scanner below, which then failed the skill for quoting it. Runs that
+    never find a matching partner are literal backticks, not an opening.
+
+    Newlines survive so the caller can still count lines, and so a span that
+    closes on a later line blanks what a Markdown reader would too.
+    """
+    out = list(text)
+    i = 0
+    while i < len(text):
+        if text[i] != "`":
+            i += 1
+            continue
+        opening = BACKTICKS.match(text, i)
+        run = opening.end() - opening.start()
+
+        closing = None
+        j = opening.end()
+        while j < len(text):
+            if text[j] != "`":
+                j += 1
+                continue
+            candidate = BACKTICKS.match(text, j)
+            if candidate.end() - candidate.start() == run:
+                closing = candidate
+                break
+            j = candidate.end()  # a longer run cannot close a shorter one
+
+        if closing is None:
+            i = opening.end()
+            continue
+        for k in range(opening.start(), closing.end()):
+            if out[k] != "\n":
+                out[k] = " "
+        i = closing.end()
+    return "".join(out)
+
+
 def strip_code(text: str) -> str:
     """Blank out fenced blocks and inline spans, preserving line numbering."""
-    out: list[str] = []
+    # None marks a line inside a fence. Prose lines are kept as they are and have
+    # their code spans blanked afterwards, in contiguous runs, so that a span is
+    # never paired across a fenced block sitting between its two halves.
+    prose: list[str | None] = []
     fence: str | None = None
     for line in text.splitlines():
         m = FENCE.match(line)
         if fence is None:
             if m and m.group("info").find("`") == -1:
                 fence = m.group("fence")[0] * len(m.group("fence"))
-                out.append("")
+                prose.append(None)
                 continue
-            out.append(INLINE_CODE.sub(" ", line))
+            prose.append(line)
         else:
             # A closing fence is the same character, at least as long, nothing else.
             if m and m.group("fence")[0] == fence[0] and len(m.group("fence")) >= len(fence) \
                     and not m.group("info").strip():
                 fence = None
-            out.append("")
+            prose.append(None)
+
+    out = [""] * len(prose)
+    start = 0
+    while start < len(prose):
+        if prose[start] is None:
+            start += 1
+            continue
+        end = start
+        while end < len(prose) and prose[end] is not None:
+            end += 1
+        blanked = blank_code_spans("\n".join(prose[start:end]))
+        out[start:end] = blanked.split("\n")
+        start = end
     return "\n".join(out)
 
 
@@ -67,14 +133,43 @@ def clean_target(raw: str) -> str | None:
     target = target.split("#", 1)[0]  # drop the fragment
     if not target:
         return None  # same-document anchor, nothing to resolve
-    return unquote(target)
+    return unquote(ESCAPED_PAREN.sub(r"\1", target))
+
+
+def inline_link_targets(text: str) -> list[tuple[int, str]]:
+    """Inline-link destinations, read with parentheses counted rather than split on.
+
+    Markdown allows balanced parentheses in a destination, so `[x](a_(b).md)`
+    points at `a_(b).md`. Stopping at the first `)` truncated that to `a_(b` and
+    reported a file that is present as missing.
+    """
+    found: list[tuple[int, str]] = []
+    for m in INLINE_LINK_OPEN.finditer(text):
+        i = m.end()
+        depth = 1
+        while i < len(text):
+            ch = text[i]
+            if ch == "\\":
+                i += 2  # an escaped parenthesis does not open or close anything
+                continue
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        if depth != 0:
+            continue  # never closed, so not a link
+        found.append((text.count("\n", 0, m.start()) + 1, text[m.end():i]))
+    return found
 
 
 def targets_in(text: str) -> list[tuple[int, str]]:
     """Every link destination in the file, with the line it appears on."""
     stripped = strip_code(text)
-    found: list[tuple[int, str]] = []
-    for pattern in (INLINE_LINK, REFERENCE_LINK, HTML_ATTR):
+    found = inline_link_targets(stripped)
+    for pattern in (REFERENCE_LINK, HTML_ATTR):
         for m in pattern.finditer(stripped):
             raw = next((g for g in m.groups() if g is not None), "")
             line = stripped.count("\n", 0, m.start()) + 1

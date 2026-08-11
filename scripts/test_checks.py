@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Regression tests for the two CI gates.
+"""Regression tests for the CI gates.
 
 A validation script that silently accepts everything looks exactly like a clean
 repository, so each case here pins one thing a gate must accept and one it must
 reject. Cases are built as throwaway skill folders in a temp directory.
+
+Both directions matter equally. A gate that rejects valid input is as unusable as
+one that accepts anything: it teaches contributors to work around it.
 
 Usage:  python3 scripts/test_checks.py
 Exit:   0 all pass, 1 otherwise.
@@ -11,6 +14,8 @@ Exit:   0 all pass, 1 otherwise.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import shutil
 import subprocess
@@ -182,6 +187,28 @@ class TestSelfContainment(Case):
         self.skill("s", "# S\n\n[root](/README.md)\n")
         self.assertRejects(SELF_CONTAINED, "links outside its own folder")
 
+    def test_accepts_a_forbidden_link_shown_inside_a_longer_code_span(self) -> None:
+        """A code span opens with any run of backticks, not only a single pair."""
+        self.skill("s", "# S\n\nNever write ``[config](../shared/config.md)`` in a skill.\n")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_accepts_a_code_span_that_closes_on_a_later_line(self) -> None:
+        """Markdown lets a span wrap; the link inside it is still an example."""
+        self.skill("s", "# S\n\nNever write `` [config](\n../shared/config.md) `` here.\n")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_accepts_balanced_parentheses_in_a_destination(self) -> None:
+        """`[x](a_(b).md)` is a valid link to a file whose name holds parentheses."""
+        d = self.skill("s", "# S\n\n[guide](docs/a_(b).md)\n")
+        (d / "docs").mkdir()
+        (d / "docs" / "a_(b).md").write_text("# A\n", encoding="utf-8")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_rejects_a_parenthesised_destination_that_leaves_the_folder(self) -> None:
+        """Counting parentheses must not become a way past the check."""
+        self.skill("s", "# S\n\n[guide](../shared/a_(b).md)\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
 
 class ManifestCase(unittest.TestCase):
     """A throwaway repository: one skill, plus the two plugin manifests."""
@@ -309,6 +336,41 @@ class TestPluginManifests(ManifestCase):
         (self.root / ".claude-plugin" / "marketplace.json").unlink()
         self.assertRejects("marketplace.json")
 
+    def test_rejects_a_required_field_of_the_wrong_type(self) -> None:
+        """A numeric `name` is not a name, and there is no entry to look it up by.
+
+        Checking only for emptiness passed this and then returned early with
+        nothing recorded, so a manifest no reader can use reported as clean.
+        """
+        self.plugin["name"] = 123
+        self.write()
+        self.assertRejects("`name` is int")
+
+    def test_rejects_an_empty_required_field(self) -> None:
+        self.plugin["description"] = ""
+        self.write()
+        self.assertRejects("empty `description`")
+
+    def test_rejects_keywords_that_are_not_a_list(self) -> None:
+        self.plugin["keywords"] = "skills, sdlc"
+        self.marketplace["plugins"][0]["keywords"] = "skills, sdlc"
+        self.write()
+        self.assertRejects("`keywords` is str, expected list")
+
+    def test_rejects_keywords_holding_something_other_than_strings(self) -> None:
+        """The list is rendered to a reader, so a number in it is junk on a page."""
+        self.plugin["keywords"] = ["skills", 7]
+        self.marketplace["plugins"][0]["keywords"] = ["skills", 7]
+        self.write()
+        self.assertRejects("not of type str")
+
+    def test_rejects_a_source_whose_skill_folders_hold_no_skill_file(self) -> None:
+        """A folder left behind by a restructure installs nothing a reader can load."""
+        (self.root / "stale" / "skills" / "placeholder").mkdir(parents=True)
+        self.marketplace["plugins"][0]["source"] = "./stale"
+        self.write()
+        self.assertRejects("contains no skills")
+
 
 class TestTriggerCorpus(unittest.TestCase):
     """The scoring half of the trigger eval, which needs no model to exercise.
@@ -334,6 +396,32 @@ class TestTriggerCorpus(unittest.TestCase):
         path = self.root / "triggers.jsonl"
         path.write_text("\n".join(json.dumps(c) for c in cases) + "\n", encoding="utf-8")
         return path
+
+    def skills_dir(self) -> Path:
+        """A catalog for `main()` to read, so the argument checks can run offline."""
+        root = self.root / "skills"
+        for name in sorted(self.known):
+            (root / name).mkdir(parents=True, exist_ok=True)
+            (root / name / "SKILL.md").write_text(
+                f"---\nname: {name}\ndescription: Does a thing. Use when asked for it. "
+                "Do not use otherwise.\n---\n",
+                encoding="utf-8",
+            )
+        return root
+
+    def run_main(self, corpus: Path, *extra: str) -> int:
+        """`main()` up to the point it would need the SDK, with stderr captured."""
+        argv = ["--skills", str(self.skills_dir()), "--corpus", str(corpus), *extra]
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            code = self.mod.main(argv)
+        self.stderr = err.getvalue()
+        return code
+
+    def two_case_corpus(self) -> Path:
+        return self.corpus(
+            {"prompt": "first", "fires": ["refactoring-continuously"], "silent": []},
+            {"prompt": "second", "fires": ["implementing-strategically"], "silent": []},
+        )
 
     def test_rejects_a_label_naming_a_skill_that_does_not_exist(self) -> None:
         """A typo in a label would quietly test nothing, forever."""
@@ -404,6 +492,37 @@ class TestTriggerCorpus(unittest.TestCase):
         result = self.mod.score(case, ["refactoring-continuously", "implementing-strategically"])
         self.assertTrue(result.routing_ok)
         self.assertTrue(result.disjoint_ok)
+
+    def test_rejects_case_zero_rather_than_running_the_last_case(self) -> None:
+        """`cases[0 - 1]` is the last case, so 0 would quietly score the wrong prompt."""
+        self.assertEqual(self.run_main(self.two_case_corpus(), "--case", "0"), 1)
+        self.assertIn("out of range", self.stderr)
+
+    def test_rejects_a_negative_case(self) -> None:
+        """`cases[-1 - 1]` is an ordinary index, so this reached the model before."""
+        self.assertEqual(self.run_main(self.two_case_corpus(), "--case", "-1"), 1)
+        self.assertIn("out of range", self.stderr)
+
+    def test_rejects_a_case_past_the_end_of_the_corpus(self) -> None:
+        self.assertEqual(self.run_main(self.two_case_corpus(), "--case", "3"), 1)
+        self.assertIn("1..2", self.stderr)
+
+    def test_rejects_a_negative_threshold_that_would_pass_every_run(self) -> None:
+        """Below 0 no failure rate can fall under the bar, so a typo reads as green."""
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            self.mod.parse_args(["--threshold", "-0.5"])
+
+    def test_rejects_a_threshold_above_one(self) -> None:
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            self.mod.parse_args(["--threshold", "1.5"])
+
+    def test_rejects_a_threshold_that_is_not_a_number(self) -> None:
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            self.mod.parse_args(["--threshold", "ninety percent"])
+
+    def test_accepts_a_threshold_at_either_edge_of_the_range(self) -> None:
+        self.assertEqual(self.mod.parse_args(["--threshold", "0"]).threshold, 0.0)
+        self.assertEqual(self.mod.parse_args(["--threshold", "1"]).threshold, 1.0)
 
     def test_the_shipped_corpus_loads_against_the_shipped_skills(self) -> None:
         """The labels and the skill folders must not drift apart."""

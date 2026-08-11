@@ -21,7 +21,7 @@ it when a description changes, and from the `Trigger eval` workflow on demand.
 Usage:  python3 scripts/run_trigger_eval.py [--skills DIR] [--corpus FILE]
                                             [--model ID] [--effort LEVEL]
                                             [--threshold FLOAT] [--case ID]
-Exit:   0 both rates at or above the threshold, 1 otherwise.
+Exit:   0 both rates at or above the threshold, 1 otherwise, 2 on bad usage.
 """
 
 from __future__ import annotations
@@ -221,6 +221,22 @@ def select(client, catalog: dict[str, str], prompt: str, model: str, effort: str
     return parse_selection(text)
 
 
+def rate(raw: str) -> float:
+    """A pass rate, rejected outside 0-1 rather than quietly redefining the gate.
+
+    The workflow passes this through as free text. A negative value would put
+    every run above the threshold — including a run where every case failed —
+    so a typo would read as a green evaluation rather than as a broken one.
+    """
+    try:
+        value = float(raw)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{raw!r} is not a number") from None
+    if not 0.0 <= value <= 1.0:
+        raise argparse.ArgumentTypeError(f"{value} is outside the 0-1 range")
+    return value
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--skills", type=Path, default=Path("skills"))
@@ -228,8 +244,8 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--model", default=DEFAULT_MODEL)
     p.add_argument("--effort", default=DEFAULT_EFFORT,
                    choices=["low", "medium", "high", "xhigh", "max"])
-    p.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD,
-                   help="minimum routing and disjointness rate to pass")
+    p.add_argument("--threshold", type=rate, default=DEFAULT_THRESHOLD,
+                   help="minimum routing and disjointness rate to pass (0-1)")
     p.add_argument("--case", type=int, action="append", dest="cases", metavar="N",
                    help="run only case N (1-based); repeatable")
     return p.parse_args(argv)
@@ -246,11 +262,14 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.cases:
-        try:
-            cases = [cases[n - 1] for n in args.cases]
-        except IndexError:
-            print(f"error: --case out of range (1..{len(cases)})", file=sys.stderr)
+        # Bounds checked rather than left to indexing: `--case 0` is a plausible
+        # typo for the first case, and Python would hand back the last one.
+        bad = sorted({n for n in args.cases if not 1 <= n <= len(cases)})
+        if bad:
+            print(f"error: --case {', '.join(str(n) for n in bad)} "
+                  f"out of range (1..{len(cases)})", file=sys.stderr)
             return 1
+        cases = [cases[n - 1] for n in args.cases]
 
     try:
         import anthropic  # noqa: PLC0415 - optional; the scoring half needs no SDK
