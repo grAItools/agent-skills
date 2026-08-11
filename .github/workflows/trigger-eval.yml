@@ -35,11 +35,19 @@ jobs:
       - name: Install the SDK
         run: pip install "anthropic==0.121.0" "PyYAML==6.0.2"
 
+      # Inputs travel through `env`, not through `${{ }}` inside `run`. Actions
+      # substitutes those expressions before the shell sees the script, so a
+      # dispatcher could put shell syntax in `model` or `threshold` — both are
+      # free text — and have it run as code in a step holding the API key. As an
+      # environment variable the same value is only ever data.
       - name: Route the corpus
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODEL: ${{ inputs.model }}
+          EFFORT: ${{ inputs.effort }}
+          THRESHOLD: ${{ inputs.threshold }}
         run: |
           python3 scripts/run_trigger_eval.py \
-            --model "${{ inputs.model }}" \
-            --effort "${{ inputs.effort }}" \
-            --threshold "${{ inputs.threshold }}"
+            --model "$MODEL" \
+            --effort "$EFFORT" \
+            --threshold "$THRESHOLD"
