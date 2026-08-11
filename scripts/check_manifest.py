@@ -110,7 +110,10 @@ def check_value(value: object, field: str, expected: object, rel: str) -> list[s
 
     if not isinstance(value, expected):
         return [f"{rel}: `{field}` is {type(value).__name__}, expected {type_name(expected)}"]
-    if isinstance(value, (str, list, dict)) and not value:
+    # Stripped, because `"   "` is truthy and carries nothing a reader can use.
+    if isinstance(value, str) and not value.strip():
+        return [f"{rel}: empty `{field}`"]
+    if isinstance(value, (list, dict)) and not value:
         return [f"{rel}: empty `{field}`"]
     return []
 
@@ -179,11 +182,14 @@ def check_source(entry: dict, root: Path) -> list[str]:
 
 
 def check(root: Path) -> list[str]:
-    plugin, problems = load(root / MANIFEST_DIR / PLUGIN)
+    plugin, plugin_problems = load(root / MANIFEST_DIR / PLUGIN)
     marketplace, market_problems = load(root / MANIFEST_DIR / MARKETPLACE)
-    problems += market_problems
-    if not plugin or not marketplace:
-        return problems  # nothing to cross-check against
+    problems = plugin_problems + market_problems
+    # Only when loading itself failed. `{}` is valid JSON and a mapping, so it
+    # loads with nothing to report; treating a falsy mapping as unloadable
+    # returned before any field was checked and called an empty manifest clean.
+    if plugin_problems or market_problems:
+        return problems  # nothing trustworthy to cross-check against
 
     problems += check_fields(plugin, PLUGIN_REQUIRED, PLUGIN_OPTIONAL,
                              f"{MANIFEST_DIR}/{PLUGIN}")

@@ -115,7 +115,10 @@ def strip_code(text: str) -> str:
     for line in text.splitlines():
         m = FENCE.match(line)
         if fence is None:
-            if m and m.group("info").find("`") == -1:
+            # Only a backtick fence forbids backticks in its info string; a
+            # tilde fence may carry them, and failing to see it as a fence would
+            # report the links inside its block as live dependencies.
+            if m and (m.group("fence")[0] == "~" or "`" not in m.group("info")):
                 fence = m.group("fence")[0] * len(m.group("fence"))
                 prose.append(None)
                 continue
@@ -150,7 +153,9 @@ def clean_target(raw: str) -> str | None:
     else:
         # Everything after the first run of whitespace is the optional title.
         target = target.split()[0] if target.split() else ""
-    target = target.split("#", 1)[0]  # drop the fragment
+    # Neither the fragment nor the query is part of the path on disk.
+    target = target.split("#", 1)[0]
+    target = target.split("?", 1)[0]
     if not target:
         return None  # same-document anchor, nothing to resolve
     return unquote(ESCAPED_PAREN.sub(r"\1", target))

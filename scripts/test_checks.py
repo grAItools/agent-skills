@@ -237,6 +237,17 @@ class TestSelfContainment(Case):
         self.skill("s", "# S\n\n   ```markdown\n   [config](../shared/config.md)\n   ```\n")
         self.assertAccepts(SELF_CONTAINED)
 
+    def test_accepts_a_query_string_on_a_resolving_link(self) -> None:
+        """A query is no more part of the path on disk than a fragment is."""
+        d = self.skill("s", "# S\n\n[report](report.md?view=compact)\n")
+        (d / "report.md").write_text("# R\n", encoding="utf-8")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_accepts_a_forbidden_link_inside_a_tilde_fence_carrying_backticks(self) -> None:
+        """Only backtick fences forbid backticks in the info string."""
+        self.skill("s", "# S\n\n~~~markdown `x`\n[config](../shared/config.md)\n~~~\n")
+        self.assertAccepts(SELF_CONTAINED)
+
 
 class ManifestCase(unittest.TestCase):
     """A throwaway repository: one skill, plus the two plugin manifests."""
@@ -363,6 +374,19 @@ class TestPluginManifests(ManifestCase):
         self.write()
         (self.root / ".claude-plugin" / "marketplace.json").unlink()
         self.assertRejects("marketplace.json")
+
+    def test_rejects_manifests_that_are_empty_objects(self) -> None:
+        """`{}` loads with nothing to report, so the gate used to call it clean."""
+        self.write(plugin_text="{}")
+        (self.root / ".claude-plugin" / "marketplace.json").write_text("{}", encoding="utf-8")
+        self.assertRejects("missing `name`")
+
+    def test_rejects_a_whitespace_only_required_string(self) -> None:
+        """`"   "` is truthy but carries nothing a reader can use."""
+        self.plugin["description"] = "   "
+        self.marketplace["plugins"][0]["description"] = "   "
+        self.write()
+        self.assertRejects("empty `description`")
 
     def test_rejects_a_required_field_of_the_wrong_type(self) -> None:
         """A numeric `name` is not a name, and there is no entry to look it up by.
@@ -563,6 +587,24 @@ class TestTriggerCorpus(unittest.TestCase):
     def test_accepts_a_threshold_at_either_edge_of_the_range(self) -> None:
         self.assertEqual(self.mod.parse_args(["--threshold", "0"]).threshold, 0.0)
         self.assertEqual(self.mod.parse_args(["--threshold", "1"]).threshold, 1.0)
+
+    def test_rejects_a_misspelled_label_field(self) -> None:
+        """`slient` would drop every disjointness assertion the case carries."""
+        path = self.corpus({"prompt": "p", "fires": [], "slient": ["refactoring-continuously"]})
+        with self.assertRaises(self.mod.CorpusError) as caught:
+            self.mod.load_corpus(path, self.known)
+        self.assertIn("slient", str(caught.exception))
+
+    def test_rejects_a_null_label_list_rather_than_crashing(self) -> None:
+        path = self.corpus({"prompt": "p", "fires": None, "silent": []})
+        with self.assertRaises(self.mod.CorpusError):
+            self.mod.load_corpus(path, self.known)
+
+    def test_rejects_a_label_list_given_as_a_bare_string(self) -> None:
+        """Iterating a string would label the case with one-letter skill names."""
+        path = self.corpus({"prompt": "p", "fires": "refactoring-continuously", "silent": []})
+        with self.assertRaises(self.mod.CorpusError):
+            self.mod.load_corpus(path, self.known)
 
     def test_rates_count_only_the_cases_that_assert(self) -> None:
         """A no-fire case makes no routing claim, so scoring it as one hides misses."""

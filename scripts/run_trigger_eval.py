@@ -75,6 +75,11 @@ that it might be tangentially useful. Selecting nothing is a valid answer.
 Reply with the names of the skills to load."""
 
 
+# Everything a case may carry. Anything else is a typo, and a misspelled
+# `silent` would drop every assertion it holds without a word.
+CASE_KEYS = frozenset({"prompt", "fires", "silent"})
+
+
 class CorpusError(Exception):
     """The corpus is malformed or has drifted from the skills it labels."""
 
@@ -116,6 +121,19 @@ def skill_catalog(skills_dir: Path) -> dict[str, str]:
     return catalog
 
 
+def label_list(data: dict, field: str, where: str) -> list[str]:
+    """One label list, rejected unless it is a list of strings.
+
+    `null` used to raise TypeError out of the reader, and a bare string used to
+    be iterated character by character into a list of one-letter labels — which
+    then failed the known-name check below with a baffling message.
+    """
+    value = data.get(field, [])
+    if not isinstance(value, list) or any(not isinstance(s, str) for s in value):
+        raise CorpusError(f"{where}: `{field}` must be a list of strings")
+    return value
+
+
 def load_corpus(path: Path, known: set[str]) -> list[Case]:
     """Read the labelled prompts, rejecting labels that name no real skill."""
     if not path.is_file():
@@ -133,12 +151,19 @@ def load_corpus(path: Path, known: set[str]) -> list[Case]:
         if not isinstance(data, dict):
             raise CorpusError(f"{where}: not a JSON object")
 
+        unknown = sorted(set(data) - CASE_KEYS)
+        if unknown:
+            raise CorpusError(
+                f"{where}: unknown field(s) {', '.join(repr(k) for k in unknown)}; "
+                f"a case carries {', '.join(sorted(CASE_KEYS))}"
+            )
+
         prompt = str(data.get("prompt", "")).strip()
         if not prompt:
             raise CorpusError(f"{where}: empty `prompt`")
 
-        fires = [str(s) for s in data.get("fires", [])]
-        silent = [str(s) for s in data.get("silent", [])]
+        fires = label_list(data, "fires", where)
+        silent = label_list(data, "silent", where)
 
         # A typo in a label is worse than a missing case: it asserts nothing and
         # nothing complains, so the skill it was meant to cover goes untested.
