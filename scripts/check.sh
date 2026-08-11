@@ -9,10 +9,11 @@
 #   skillscheck  the published specification and its own house rules — broken
 #                links, leaked secrets, oversized assets, plugin manifests
 #
-# Run under --strict, so a warning fails the run. Pinning is what makes that
-# safe: a version that gains checks cannot start failing pull requests that
-# changed nothing. Bump the pins deliberately, and read what the new version
-# says before you do.
+# skillscheck runs under --strict, so a warning fails the run too; skills-ref has
+# no such mode and reports errors only. Pinning is what makes --strict safe: a
+# version that gains checks cannot start failing pull requests that changed
+# nothing. Bump the pins deliberately, and read what the new version says before
+# you do.
 #
 # CI runs this file rather than its own copy of these commands, so a green tick
 # locally and a green tick on a pull request mean the same thing.

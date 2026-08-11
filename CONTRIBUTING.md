@@ -109,9 +109,11 @@ own copy of the commands. Two validators, neither maintained here:
   syntax, the fields the format defines, the limits it sets.
 - **`skillscheck`** — the published specification and its own house rules: broken
   links, leaked secrets, oversized assets, and both plugin manifests, including
-  whether their descriptions still agree with each other.
+  whether `plugin.json`'s description still agrees with `marketplace.json`'s
+  `metadata.description`.
 
-Both are pinned inside the script and run with warnings treated as errors.
+Both are pinned inside the script; `skillscheck` additionally runs under
+`--strict`, so its warnings fail the run too (`skills-ref` reports errors only).
 Pinning is what makes that safe: a validator that gains checks between releases
 would otherwise start failing pull requests that changed nothing. Bump a pin
 deliberately, and read what the new version has to say before you do.
@@ -134,10 +136,12 @@ files in `.claude-plugin/`:
 The name and description appear in both files, and `marketplace.json` carries the
 description a third time under `metadata`. Edit one and you must edit the others:
 nothing at install time objects, the listing simply stops describing the plugin it
-installs. `skillscheck` is what notices — it reads both manifests, names the
-fields a reader depends on when they are missing, and compares the descriptions
-across them.
+installs. `skillscheck` catches part of that — it reads both manifests, names the
+fields a reader depends on when they are missing, and compares `plugin.json`'s
+description against `metadata.description`. It does *not* compare the description
+on the `plugins[]` entry, which is the one a marketplace listing shows, so that
+third copy is on you and on review.
 
 Bump `version` in `plugin.json` when the set of skills changes, so installations
 can `/plugin marketplace update graitools` onto something newer, and keep
-`metadata.version` in step with it.
+`metadata.version` in step with it — no validator checks that pair either.
