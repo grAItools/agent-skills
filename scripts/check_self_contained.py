@@ -35,7 +35,9 @@ FENCE = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
 BACKTICKS = re.compile(r"`+")
 
 INLINE_LINK_OPEN = re.compile(r"\]\(")
-REFERENCE_LINK = re.compile(r"^[ \t]{0,3}\[[^\]]+\]:[ \t]*(\S+)", re.M)
+# `(?!\^)` keeps GFM footnote definitions out: `[^1]: some explanation` is not a
+# reference definition, and reading one as a link made a file of its first word.
+REFERENCE_LINK = re.compile(r"^[ \t]{0,3}\[(?!\^)[^\]]+\]:[ \t]*(\S+)", re.M)
 HTML_ATTR = re.compile(r"""\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.I)
 
 # `\(` in a destination is a literal parenthesis, not a nesting one.
@@ -230,6 +232,10 @@ def inline_link_targets(text: str) -> list[tuple[int, str]]:
     """Every inline-link destination, with the line its link starts on."""
     found: list[tuple[int, str]] = []
     for m in INLINE_LINK_OPEN.finditer(text):
+        # An escaped `]` closes no label, so `\[x\](target)` renders as the text
+        # of a link rather than a link, and its target is not a dependency.
+        if is_escaped(text, m.start()):
+            continue
         destination = read_destination(text, m.end())
         if destination is not None:
             found.append((text.count("\n", 0, m.start()) + 1, destination))

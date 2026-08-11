@@ -168,8 +168,16 @@ def check_source(entry: dict, root: Path) -> list[str]:
     source = entry.get("source")
     if not isinstance(source, str) or not source:
         return [f"{MANIFEST_DIR}/{MARKETPLACE}: entry has no `source`"]
+    # Not silently accepted. CONTRIBUTING.md says this gate checks that `source`
+    # resolves to a directory shipping skills, and a remote string cannot be held
+    # to that from here — so returning clean claimed a check that never ran. If a
+    # remote source is ever wanted, this gate and that sentence change together.
     if "://" in source:
-        return []  # a remote source is not ours to resolve
+        return [
+            f"{MANIFEST_DIR}/{MARKETPLACE}: `source` {source!r} is remote; this gate "
+            "only verifies a repository-local source, so it cannot confirm that one "
+            "ships skills"
+        ]
 
     resolved = (root / source).resolve()
     if not resolved.is_dir():

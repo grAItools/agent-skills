@@ -170,7 +170,9 @@ edit the other: nothing at install time objects, the listing simply stops
 describing the plugin it installs. `scripts/check_manifest.py` is what notices —
 it checks that both files parse, that the fields a reader depends on are present,
 that `version` is a semantic version, that `license` is the `MIT` every skill
-carries, and that the `source` resolves to a directory that ships skills.
+carries, and that the `source` resolves to a directory that ships skills. A
+remote `source` is rejected rather than assumed good: nothing here can resolve
+one, and a check that cannot run should say so instead of passing.
 
 Bump `version` in `plugin.json` when the set of skills changes, so installations
 can `/plugin marketplace update graitools` onto something newer.

@@ -151,6 +151,8 @@ def load_corpus(path: Path, known: set[str]) -> list[Case]:
         if not isinstance(data, dict):
             raise CorpusError(f"{where}: not a JSON object")
 
+        # Unknown before missing, so a misspelling is reported as the misspelling
+        # it is rather than as the field it displaced.
         unknown = sorted(set(data) - CASE_KEYS)
         if unknown:
             raise CorpusError(
@@ -158,9 +160,20 @@ def load_corpus(path: Path, known: set[str]) -> list[Case]:
                 f"a case carries {', '.join(sorted(CASE_KEYS))}"
             )
 
-        prompt = str(data.get("prompt", "")).strip()
-        if not prompt:
-            raise CorpusError(f"{where}: empty `prompt`")
+        # All three are required. Rejecting typos was not enough: an omitted
+        # `silent` drops every assertion it carried just as quietly, and writing
+        # an explicit `[]` says the case meant to assert nothing.
+        missing = sorted(CASE_KEYS - set(data))
+        if missing:
+            raise CorpusError(
+                f"{where}: missing field(s) {', '.join(repr(k) for k in missing)}; "
+                "write an empty list to assert nothing"
+            )
+
+        prompt = data["prompt"]
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise CorpusError(f"{where}: `prompt` must be a non-empty string")
+        prompt = prompt.strip()
 
         fires = label_list(data, "fires", where)
         silent = label_list(data, "silent", where)

@@ -237,6 +237,16 @@ class TestSelfContainment(Case):
         self.skill("s", "# S\n\n   ```markdown\n   [config](../shared/config.md)\n   ```\n")
         self.assertAccepts(SELF_CONTAINED)
 
+    def test_accepts_an_escaped_link_shown_as_literal_text(self) -> None:
+        r"""`\[x\](target)` renders as the text of a link, so it depends on nothing."""
+        self.skill("s", "# S\n\nNever write \\[config\\](../shared/config.md) in a skill.\n")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_accepts_a_footnote_definition(self) -> None:
+        """`[^1]: ...` is a GFM footnote, not a reference definition to a file."""
+        self.skill("s", "# S\n\nA claim.[^1]\n\n[^1]: Explanation of the constraint\n")
+        self.assertAccepts(SELF_CONTAINED)
+
     def test_accepts_a_query_string_on_a_resolving_link(self) -> None:
         """A query is no more part of the path on disk than a fragment is."""
         d = self.skill("s", "# S\n\n[report](report.md?view=compact)\n")
@@ -369,6 +379,12 @@ class TestPluginManifests(ManifestCase):
         self.marketplace["plugins"][0]["source"] = "./empty"
         self.write()
         self.assertRejects("no skills")
+
+    def test_rejects_a_remote_source_rather_than_assuming_it_is_good(self) -> None:
+        """A check that cannot run should say so, not return clean."""
+        self.marketplace["plugins"][0]["source"] = "git://example.invalid/nothing"
+        self.write()
+        self.assertRejects("is remote")
 
     def test_rejects_a_missing_manifest(self) -> None:
         self.write()
@@ -594,6 +610,21 @@ class TestTriggerCorpus(unittest.TestCase):
         with self.assertRaises(self.mod.CorpusError) as caught:
             self.mod.load_corpus(path, self.known)
         self.assertIn("slient", str(caught.exception))
+
+    def test_rejects_a_case_with_an_omitted_label_field(self) -> None:
+        """Omitting `silent` drops its assertions as quietly as misspelling it."""
+        path = self.corpus({"prompt": "p", "fires": ["refactoring-continuously"]})
+        with self.assertRaises(self.mod.CorpusError) as caught:
+            self.mod.load_corpus(path, self.known)
+        self.assertIn("silent", str(caught.exception))
+
+    def test_rejects_a_prompt_that_is_not_a_string(self) -> None:
+        """`str(None)` is the truthy prompt 'None', which the model would be sent."""
+        for value in (None, 42, ["p"]):
+            with self.subTest(value=value):
+                path = self.corpus({"prompt": value, "fires": [], "silent": []})
+                with self.assertRaises(self.mod.CorpusError):
+                    self.mod.load_corpus(path, self.known)
 
     def test_rejects_a_null_label_list_rather_than_crashing(self) -> None:
         path = self.corpus({"prompt": "p", "fires": None, "silent": []})
