@@ -17,9 +17,9 @@ The output of this skill is a design/plan document good enough that someone else
 - An agreed set of requirements needs a technical design or implementation plan.
 - Choosing module boundaries, interfaces, data models, layering, or inter-service relationships.
 - An existing structure must change to accommodate a feature.
-- A "how should we build this?" question, or an architecture review.
+- A "how should we build this?" question, or weighing an existing structure before committing to a change to it.
 
-Do not use when requirements are still unclear (establish those first) or for trivial changes that fit the existing design cleanly — but decide that consciously, don't assume it.
+Do not use when requirements are still unclear (establish those first), for trivial changes that fit the existing design cleanly, or to judge a design that is already written — a review skill owns that. But decide it consciously, don't assume it.
 
 ## Before Designing
 

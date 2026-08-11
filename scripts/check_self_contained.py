@@ -43,8 +43,11 @@ INLINE_LINK_OPEN = re.compile(r"\]\(")
 # that form unchecked, which is a bypass rather than a missed warning. The
 # angle-bracketed alternative comes first because such a destination may contain
 # spaces, and `\S+` would stop at the first one.
+# The label reads escapes rather than stopping at the first `]`, since a label may
+# contain one: `[other\]]: ../outside/SKILL.md` is a definition, and cutting the
+# label short made the pattern miss it and leave that target unscanned.
 REFERENCE_LINK = re.compile(
-    r"^[ \t]{0,3}\[(?!\^)[^\]]+\]:[ \t]*\r?\n?[ \t]*(<[^>\n]*>|\S+)", re.M
+    r"^[ \t]{0,3}\[(?!\^)(?:[^\]\\]|\\.)+\]:[ \t]*\r?\n?[ \t]*(<[^>\n]*>|\S+)", re.M
 )
 HTML_ATTR = re.compile(r"""\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.I)
 

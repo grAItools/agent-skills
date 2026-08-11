@@ -268,6 +268,11 @@ class TestSelfContainment(Case):
         self.skill("s", "# S\n\nSee [the other][o].\n\n[o]:\n../other/SKILL.md\n")
         self.assertRejects(SELF_CONTAINED, "links outside its own folder")
 
+    def test_rejects_a_reference_definition_whose_label_escapes_a_bracket(self) -> None:
+        r"""A label may contain `\]`, and stopping there hid the target entirely."""
+        self.skill("s", "# S\n\nSee [it][other\\]].\n\n[other\\]]: ../outside/SKILL.md\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
     def test_accepts_an_angle_bracketed_reference_destination_with_spaces(self) -> None:
         d = self.skill("s", "# S\n\nSee [it][o].\n\n[o]: <a file.md>\n")
         (d / "a file.md").write_text("# A\n", encoding="utf-8")

@@ -70,7 +70,7 @@ Work through these in order; each layer's findings can moot the ones below.
 
 ## Testing the Change
 
-Judge (and, when asked, build) tests along these dimensions. Climb them in order: with units verified first, an integration failure points at the integration.
+Judge tests along these dimensions. Climb them in order: with units verified first, an integration failure points at the integration. Writing the missing ones is the implementation skill's work, not this one's — name the gap and hand it back.
 
 - **Unit against contract** — each module honors its stated promises across the full input range: boundaries, empty/zero cases, maximum sizes, invalid input.
 - **Integration** — do modules honor the contracts *between* them? This is the single largest source of bugs after unit level.

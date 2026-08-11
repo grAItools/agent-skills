@@ -31,20 +31,24 @@ understanding has outgrown, not what merely looks old.
 
 ## The process
 
-1. **Ask first what the design *should* be** given the new requirement — the structure
-   it would have if built with this change in mind — then refactor toward that and
-   make the change, rather than patching around the misfit. Scope it to the code your
-   change actually touches — the target is the misfit in your path, not a rewrite of
-   the file. If constraints truly forbid it now, do the best possible within them and
-   schedule the deferred refactoring visibly.
+1. **Ask first what the design *should* be** given the requirement that exposed the
+   misfit — the structure the code would have if built with that change in mind — and
+   refactor toward it as its own behavior-preserving step, rather than patching around
+   the misfit. Scope it to the misfit, not a rewrite of the file. Making the behavior
+   change alongside is the implementation task and an implementation skill covers it;
+   what lands here is the restructuring. If constraints truly forbid it now, do the
+   best possible within them and schedule the deferred refactoring visibly.
 2. **Never mix refactoring with behavior change.** Have tests green before starting —
    if the code has no tests, first pin its current behavior with characterization
    tests, then move. Take small, deliberate steps (rename, move, extract); run the
    tests after each step; keep the refactoring and the feature/fix as separate
    changes.
-3. **Fix broken windows on contact:** bad names, duplication, misfit structure. If you
-   genuinely cannot fix one now, board it up visibly (a marker, a tracked task) so
-   nobody mistakes neglect for acceptance.
+3. **Name what you are repairing:** bad names, duplication, misfit structure. The
+   broken windows *in the path* of a change belong to that change, and an
+   implementation skill repairs them there; this step is for the debt beyond that
+   path, which is why it earns a task of its own. If you genuinely cannot fix a piece
+   of it now, board it up visibly (a marker, a tracked task) so nobody mistakes
+   neglect for acceptance.
 4. **Watch the deeper signals — refactor on model grounds, not just code smells:**
    - *Change amplification:* one conceptual change requires edits in many places.
    - *Wrong-model churn:* requirements that "don't fit" keep arriving at the same
