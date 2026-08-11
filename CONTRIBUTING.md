@@ -102,12 +102,75 @@ which stays a review question.
    python -m skills_ref.cli validate skills/my-skill-name  # the open format
    python3 scripts/lint_skills.py                          # the frontmatter contract
    python3 scripts/check_self_contained.py                 # links stay in the folder
+   python3 scripts/check_manifest.py                       # the plugin manifests agree
    ```
 
-   All three also run in CI on every pull request, alongside
-   `scripts/test_checks.py`, which pins what the two house checks must keep
-   rejecting. They check *structure* — that the clauses are present, that no
-   trigger is universally broad, that every link resolves. Whether a trigger is
-   drawn in the right place is a review question, not a mechanical one, so expect
-   that to be discussed on the pull request.
-4. Open a pull request describing the concrete situations the skill is for.
+   All four also run in CI on every pull request, alongside
+   `scripts/test_checks.py`, which pins what the house checks must keep
+   rejecting, and an advisory `skillscheck` job that lints the same folders
+   against the published specification. They check *structure* — that the
+   clauses are present, that no trigger is universally broad, that every link
+   resolves. Whether a trigger is drawn in the right place is answered by the
+   eval below and by review, not by a substring check.
+4. Add at least one case to `evals/triggers.jsonl` (see below).
+5. Open a pull request describing the concrete situations the skill is for.
+
+## The trigger eval
+
+The description contract exists so that a prompt loads the one skill that owns
+it and does not drag its neighbours along. No mechanical check can confirm that:
+a trigger clause can be present, specific, and still drawn in the wrong place.
+`evals/triggers.jsonl` is where that claim gets tested. Each line is a realistic
+prompt plus two labels — the skills that must fire, and the skills that must
+stay silent:
+
+```json
+{"prompt": "This is supposed to be a one-line price change and it needs edits in eleven files.",
+ "fires": ["refactoring-continuously"], "silent": ["designing-before-coding"]}
+```
+
+The two labels are scored separately, because they fail for different reasons. A
+skill that does not fire has a trigger missing a situation it owns. A skill that
+fires when it should not have has a boundary in the wrong place — and that is
+the failure that costs context in every session. A skill named in neither list
+is unjudged, so a case can be added for one skill without re-labelling the rest.
+Cases where *nothing* should fire matter as much as the positive ones; they are
+what catches a trigger that has quietly widened.
+
+Run it against the descriptions as they stand:
+
+```bash
+pip install anthropic
+python3 scripts/run_trigger_eval.py            # or --case 3 while iterating
+```
+
+It needs an API key (or an `ant auth login` profile), costs money per run, and
+will not return the same result every time. That is why it is not a pull request
+gate: a red tick that comes and goes teaches people to ignore red ticks. It runs
+from the **Trigger eval** workflow on demand, and the honest time to run it is
+when you change a `description` — the corpus is the record of what those
+descriptions promised.
+
+When a case fails, the corpus is as likely to be wrong as the skill. A prompt
+that no skill should own, labelled as though one should, is a bad case, not a
+bad trigger.
+
+## Packaging
+
+The repository is also installable as a Claude Code plugin, described by two
+files in `.claude-plugin/`:
+
+- `plugin.json` — what the plugin is: `name`, `version`, `description`,
+  `license`, and its `keywords`.
+- `marketplace.json` — how it is advertised, including an entry whose `source`
+  points at the directory the skills are installed from.
+
+The name, description and keyword list appear in both. Edit one and you must
+edit the other: nothing at install time objects, the listing simply stops
+describing the plugin it installs. `scripts/check_manifest.py` is what notices —
+it checks that both files parse, that the fields a reader depends on are present,
+that `version` is a semantic version, that `license` is the `MIT` every skill
+carries, and that the `source` resolves to a directory that ships skills.
+
+Bump `version` in `plugin.json` when the set of skills changes, so installations
+can `/plugin marketplace update graitools` onto something newer.

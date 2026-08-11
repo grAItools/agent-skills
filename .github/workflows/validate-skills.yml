@@ -49,3 +49,27 @@ jobs:
       # repo-root relative link would arrive broken.
       - name: Check skills are self-contained
         run: python3 scripts/check_self_contained.py skills
+
+      # The name, description and keywords are written down in both plugin
+      # manifests, so an edit to one drifts silently from the other.
+      - name: Check the plugin manifests
+        run: python3 scripts/check_manifest.py .
+
+  # A second opinion from a tool nobody here maintains: it reads the same
+  # folders against the published specification and its own house rules, and
+  # catches classes of problem the gates above do not look for — leaked secrets,
+  # oversized assets, unresolved heading anchors. Advisory on purpose: its
+  # warnings are opinions this repository has not agreed to, and a pull request
+  # should not fail on someone else's opinion. Read the log, then decide.
+  advisory:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      # Pinned for the same reason as the validator above: a linter that gains
+      # checks between releases would fail pull requests that changed nothing.
+      - name: Lint against the published specification
+        run: uvx skillscheck@0.9.5 . --format json
