@@ -37,7 +37,15 @@ BACKTICKS = re.compile(r"`+")
 INLINE_LINK_OPEN = re.compile(r"\]\(")
 # `(?!\^)` keeps GFM footnote definitions out: `[^1]: some explanation` is not a
 # reference definition, and reading one as a link made a file of its first word.
-REFERENCE_LINK = re.compile(r"^[ \t]{0,3}\[(?!\^)[^\]]+\]:[ \t]*(\S+)", re.M)
+#
+# One line ending may sit between the colon and the destination, so a definition
+# split across two lines is still a definition — matching only the same line left
+# that form unchecked, which is a bypass rather than a missed warning. The
+# angle-bracketed alternative comes first because such a destination may contain
+# spaces, and `\S+` would stop at the first one.
+REFERENCE_LINK = re.compile(
+    r"^[ \t]{0,3}\[(?!\^)[^\]]+\]:[ \t]*\r?\n?[ \t]*(<[^>\n]*>|\S+)", re.M
+)
 HTML_ATTR = re.compile(r"""\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.I)
 
 # `\(` in a destination is a literal parenthesis, not a nesting one.
@@ -51,8 +59,11 @@ SCHEME = re.compile(r"\A[A-Za-z][A-Za-z0-9+.\-]*:")
 
 # `file:` is a scheme, but it names a path on the reader's own disk rather than
 # something on the network, so exempting it would exempt the one kind of absolute
-# dependency this check exists to catch.
+# dependency this check exists to catch. A drive-rooted path is the same problem
+# wearing a scheme's clothes: `C:/shared/file.md` matches SCHEME, and `isabs()`
+# does not recognise it away from Windows, so it slipped through both tests.
 LOCAL_SCHEME = re.compile(r"\Afile:", re.I)
+DRIVE_PATH = re.compile(r"\A[A-Za-z]:[\\/]")
 
 
 def is_escaped(text: str, i: int) -> bool:
@@ -178,22 +189,25 @@ def opens_a_label(text: str, close: int) -> bool:
     it. `\\[x](target)` and a bare `](target)` in prose render no link, so
     reading a dependency out of either reports one that does not exist.
 
-    Scanned backwards for an unescaped `[`, stepping over escaped brackets, which
-    are ordinary text inside a label. An unescaped `]`, a blank line, or the start
-    of the file means the label was never opened. This is bounded on purpose: it
-    resolves one bracket rather than parsing nesting, because the risk to weigh is
-    a false negative — an unchecked cross-folder link — and less machinery is less
-    to get wrong.
+    Scanned backwards with bracket depth, stepping over escaped brackets, which
+    are ordinary text inside a label. Depth matters: link text may contain
+    balanced nested brackets, so `[outer [inner]](target)` opens a real label, and
+    stopping at the first `]` on the way back declared it no link and skipped the
+    dependency entirely — a bypass, not a missed warning. A blank line or the
+    start of the file means the label was never opened.
     """
     if is_escaped(text, close):
         return False  # an escaped `]` closes nothing
+    depth = 1
     i = close - 1
     while i >= 0:
         ch = text[i]
-        if ch in "[]" and not is_escaped(text, i):
-            return ch == "["
         if ch == "\n" and i > 0 and text[i - 1] == "\n":
             return False  # a label does not survive a blank line
+        if ch in "[]" and not is_escaped(text, i):
+            depth += 1 if ch == "]" else -1
+            if depth == 0:
+                return True
         i -= 1
     return False
 
@@ -298,7 +312,7 @@ def check_file(md: Path, skill_dir: Path) -> list[str]:
         if target is None:
             continue
         where = f"{md}:{line}"
-        if LOCAL_SCHEME.match(target):
+        if LOCAL_SCHEME.match(target) or DRIVE_PATH.match(target):
             problems.append(f"{where}: links outside its own folder: {target}")
             continue
         if SCHEME.match(target) or target.startswith("//"):

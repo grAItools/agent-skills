@@ -59,9 +59,10 @@ ENTRY_OPTIONAL = (("description", str), ("keywords", [str]))
 # carries both a prerelease and build metadata, while accepting `2.1.0-01`, whose
 # leading zero is not.
 SEMVER = re.compile(
-    r"\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
-    r"(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
-    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+    # `[0-9]` rather than `\d`, which in Python also matches digits like `١٢`.
+    r"\A(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-(?:(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)"
+    r"(?:\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
     r"(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?\Z"
 )
 
@@ -127,8 +128,10 @@ def check_fields(data: dict, required: tuple[tuple[str, object], ...],
             problems.append(f"{rel}: missing `{field}`")
         else:
             problems += check_value(data[field], field, expected, rel)
+    # Membership, not `get()`: an explicit `null` is present and the wrong shape,
+    # and `get(...) is not None` waved it through as though the field were absent.
     for field, expected in optional:
-        if data.get(field) is not None:
+        if field in data:
             problems += check_value(data[field], field, expected, rel)
     return problems
 

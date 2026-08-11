@@ -351,8 +351,11 @@ def main(argv: list[str] | None = None) -> int:
         try:
             selected = select(client, catalog, case.prompt, args.model, args.effort)
         except Exception as exc:  # one bad call should not lose the whole run
+            # Deliberately not added to `scored`. An unevaluated case is not
+            # evidence about a description, so scoring it as a miss would make the
+            # rates below measure API reliability alongside the thing they claim
+            # to measure. It is counted instead, and counted is enough to fail.
             print(f"FAIL {i:>3}  {case.prompt[:60]!r}\n       - {exc}")
-            scored.append((case, Result(False, False, str(exc))))
             unevaluated += 1
             continue
 

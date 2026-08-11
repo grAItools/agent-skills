@@ -258,6 +258,26 @@ class TestSelfContainment(Case):
         self.skill("s", "# S\n\nSee [config](../shared/config.md) for more.\n")
         self.assertRejects(SELF_CONTAINED, "links outside its own folder")
 
+    def test_rejects_an_out_of_folder_link_whose_text_nests_brackets(self) -> None:
+        """Link text may nest balanced brackets, and the label still opens."""
+        self.skill("s", "# S\n\n[outer [inner]](../other/SKILL.md)\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
+    def test_rejects_a_reference_definition_split_across_two_lines(self) -> None:
+        """One line ending may sit before the destination, and it is still live."""
+        self.skill("s", "# S\n\nSee [the other][o].\n\n[o]:\n../other/SKILL.md\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
+    def test_accepts_an_angle_bracketed_reference_destination_with_spaces(self) -> None:
+        d = self.skill("s", "# S\n\nSee [it][o].\n\n[o]: <a file.md>\n")
+        (d / "a file.md").write_text("# A\n", encoding="utf-8")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_rejects_a_windows_drive_rooted_path(self) -> None:
+        """`C:/...` matches a URI scheme and is not absolute away from Windows."""
+        self.skill("s", "# S\n\n[x](C:/shared/file.md)\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
     def test_accepts_a_code_span_closed_by_a_backtick_after_a_backslash(self) -> None:
         """Escapes stop applying once a span opens, so that backtick does close it."""
         self.skill("s", "# S\n\nNever write `[x](../other/SKILL.md)\\` in a skill.\n")
@@ -476,6 +496,19 @@ class TestPluginManifests(ManifestCase):
         self.write()
         self.assertAccepts()
 
+    def test_rejects_a_version_written_with_non_ascii_digits(self) -> None:
+        r"""SemVer numbers are ASCII; Python's `\d` is not."""
+        self.plugin["version"] = "1٢.0.0"
+        self.write()
+        self.assertRejects("not a semantic version")
+
+    def test_rejects_keywords_present_as_an_explicit_null(self) -> None:
+        """Present and the wrong shape, which `get(...) is not None` read as absent."""
+        self.plugin["keywords"] = None
+        self.marketplace["plugins"][0]["keywords"] = None
+        self.write()
+        self.assertRejects("`keywords` is NoneType")
+
     def test_rejects_a_prerelease_identifier_with_a_leading_zero(self) -> None:
         """`2.1.0-01` is not valid SemVer, however much it looks like it."""
         self.plugin["version"] = "2.1.0-01"
@@ -676,9 +709,11 @@ class TestTriggerCorpus(unittest.TestCase):
             self.mod.load_corpus(path, self.known)
 
     def test_a_call_that_never_happened_makes_the_run_inconclusive(self) -> None:
-        """Ten of eleven cases pass at 91%, so a rate cannot notice the missing one.
+        """A failed call is an unevaluated case, not evidence about a description.
 
-        A failed call is an unevaluated case, not evidence about a description.
+        It is kept out of the rates entirely — reporting 10/10 rather than 10/11,
+        which would have measured API reliability as description quality — and the
+        run still fails, because a rate is the wrong instrument for "did not run".
         """
         def reply(text: str) -> object:
             block = type("Block", (), {"type": "text", "text": text})()
@@ -706,7 +741,8 @@ class TestTriggerCorpus(unittest.TestCase):
         finally:
             del sys.modules["anthropic"]
 
-        self.assertIn("10/11", out.getvalue())  # 91%, above the default threshold
+        self.assertIn("10/10", out.getvalue())  # the failed call is not a miss
+        self.assertNotIn("10/11", out.getvalue())
         self.assertIn("could not be evaluated", out.getvalue())
         self.assertEqual(code, 1)
 
