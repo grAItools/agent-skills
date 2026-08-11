@@ -15,7 +15,7 @@ verify → deliver**, wrapped in **continuous refactoring**:
 | Skill | Phase | Use when |
 |---|---|---|
 | [discovering-requirements](skills/discovering-requirements/SKILL.md) | Discover | A new feature, defect report, or vague request has unclear or contested purpose, users, or scope — or arrives as a solution rather than a need |
-| [designing-before-coding](skills/designing-before-coding/SKILL.md) | Design | An agreed requirement needs a technical design or plan, a change calls for a new abstraction, or an architecture needs evaluating |
+| [designing-before-coding](skills/designing-before-coding/SKILL.md) | Design | An agreed requirement needs a technical design or plan, a change calls for a new abstraction, or a structural choice is still open |
 | [implementing-strategically](skills/implementing-strategically/SKILL.md) | Implement | Writing or modifying code to deliver a planned feature, fix, or extension — especially when schedule pressure invites the fastest change that appears to work |
 | [verifying-changes](skills/verifying-changes/SKILL.md) | Verify | Work is believed complete, a diff or design needs review, or "all tests pass" is being weighed as enough to ship |
 | [delivering-for-feedback](skills/delivering-for-feedback/SKILL.md) | Deliver | A working increment exists and release timing is in question, or development has run for weeks without user contact |

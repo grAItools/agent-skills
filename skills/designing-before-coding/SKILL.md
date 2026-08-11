@@ -1,6 +1,6 @@
 ---
 name: designing-before-coding
-description: Produces a deliberate structural design (module boundaries, interfaces, data models, error behavior) by generating several alternatives, studying prior art, naming the scarce resource, and recording rationale. Use when an agreed requirement needs a technical design or implementation plan before code, when a change calls for a new abstraction rather than a bolt-on, when a feature forces an existing structure to shift, or when an architecture needs evaluating or documenting. Do not use for changes that fit the existing structure, or to decide what to build rather than how; use a requirements skill for that.
+description: Produces a deliberate structural design (module boundaries, interfaces, data models, error behavior) by generating several alternatives, studying prior art, naming the scarce resource, and recording rationale. Use when an agreed requirement needs a technical design or implementation plan before code, when a change calls for a new abstraction rather than a bolt-on, when a feature forces an existing structure to shift, or when a structural choice is still open and its rationale needs recording. Do not use for changes that fit the existing structure, to decide what to build rather than how — use a requirements skill for that — or to judge whether a design someone has already written holds up; use a review skill for that.
 license: MIT
 ---
 
