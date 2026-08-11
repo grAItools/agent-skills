@@ -209,6 +209,34 @@ class TestSelfContainment(Case):
         self.skill("s", "# S\n\n[guide](../shared/a_(b).md)\n")
         self.assertRejects(SELF_CONTAINED, "links outside its own folder")
 
+    def test_rejects_an_out_of_folder_link_with_parentheses_in_its_title(self) -> None:
+        """A title's punctuation is text: counting it left the link looking unclosed.
+
+        An unclosed link is skipped, so the check silently stopped applying to it.
+        """
+        self.skill("s", '# S\n\n[x](../other/SKILL.md "note (")\n')
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
+    def test_accepts_a_resolving_link_with_parentheses_in_both_parts(self) -> None:
+        d = self.skill("s", '# S\n\n[ok](docs/a_(b).md "a (title)")\n')
+        (d / "docs").mkdir()
+        (d / "docs" / "a_(b).md").write_text("# A\n", encoding="utf-8")
+        self.assertAccepts(SELF_CONTAINED)
+
+    def test_rejects_an_out_of_folder_link_wrapped_in_escaped_backticks(self) -> None:
+        r"""`\`` is a literal backtick, so the link between them is live Markdown."""
+        self.skill("s", "# S\n\nliteral \\`[x](../other/SKILL.md)\\` here\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
+    def test_rejects_a_link_after_a_four_space_indented_pseudo_fence(self) -> None:
+        """Four spaces is an indented code block, not a fence, so the link is live."""
+        self.skill("s", "# S\n\n    ```\n[x](../other/SKILL.md)\n")
+        self.assertRejects(SELF_CONTAINED, "links outside its own folder")
+
+    def test_accepts_a_fence_indented_within_the_three_spaces_markdown_allows(self) -> None:
+        self.skill("s", "# S\n\n   ```markdown\n   [config](../shared/config.md)\n   ```\n")
+        self.assertAccepts(SELF_CONTAINED)
+
 
 class ManifestCase(unittest.TestCase):
     """A throwaway repository: one skill, plus the two plugin manifests."""
@@ -363,6 +391,18 @@ class TestPluginManifests(ManifestCase):
         self.marketplace["plugins"][0]["keywords"] = ["skills", 7]
         self.write()
         self.assertRejects("not of type str")
+
+    def test_accepts_a_version_carrying_both_prerelease_and_build_metadata(self) -> None:
+        """`2.1.0-rc.1+build.7` is valid SemVer; the gate must not block a release."""
+        self.plugin["version"] = "2.1.0-rc.1+build.7"
+        self.write()
+        self.assertAccepts()
+
+    def test_rejects_a_prerelease_identifier_with_a_leading_zero(self) -> None:
+        """`2.1.0-01` is not valid SemVer, however much it looks like it."""
+        self.plugin["version"] = "2.1.0-01"
+        self.write()
+        self.assertRejects("not a semantic version")
 
     def test_rejects_a_source_whose_skill_folders_hold_no_skill_file(self) -> None:
         """A folder left behind by a restructure installs nothing a reader can load."""
@@ -523,6 +563,37 @@ class TestTriggerCorpus(unittest.TestCase):
     def test_accepts_a_threshold_at_either_edge_of_the_range(self) -> None:
         self.assertEqual(self.mod.parse_args(["--threshold", "0"]).threshold, 0.0)
         self.assertEqual(self.mod.parse_args(["--threshold", "1"]).threshold, 1.0)
+
+    def test_rates_count_only_the_cases_that_assert(self) -> None:
+        """A no-fire case makes no routing claim, so scoring it as one hides misses."""
+        hit = self.mod.Case("p", ["refactoring-continuously"], [])
+        miss = self.mod.Case("p", ["implementing-strategically"], [])
+        no_fire = self.mod.Case("p", [], ["refactoring-continuously"])
+        scored = [
+            (hit, self.mod.Result(True, True)),
+            (miss, self.mod.Result(False, True)),
+            (no_fire, self.mod.Result(True, True)),
+        ]
+        routed, routing_total, disjoint, disjoint_total = self.mod.rates(scored)
+        self.assertEqual((routed, routing_total), (1, 2))  # not 2/3
+        self.assertEqual((disjoint, disjoint_total), (1, 1))
+
+    def test_rejects_a_selection_naming_a_skill_outside_the_catalog(self) -> None:
+        """A name nobody wrote is a broken reply, not a routing decision."""
+
+        class Reply:
+            stop_reason = "end_turn"
+            content = [type("Block", (), {"type": "text", "text": '["made-up-skill"]'})()]
+
+        class Client:
+            class messages:
+                @staticmethod
+                def create(**_: object) -> Reply:
+                    return Reply()
+
+        with self.assertRaises(ValueError) as caught:
+            self.mod.select(Client(), {"refactoring-continuously": "d"}, "p", "m", "medium")
+        self.assertIn("made-up-skill", str(caught.exception))
 
     def test_the_shipped_corpus_loads_against_the_shipped_skills(self) -> None:
         """The labels and the skill folders must not drift apart."""

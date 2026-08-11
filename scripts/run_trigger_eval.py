@@ -13,7 +13,9 @@ loads, while a co-firing neighbour is a boundary drawn in the wrong place, and
 that is the failure the description contract exists to prevent.
 
 A case only asserts what it names. Skills in neither list are unjudged, so a
-case can be added for one skill without re-labelling every other.
+case can be added for one skill without re-labelling every other. Each rate is
+taken over the cases carrying the matching label, so a prompt with nothing to
+fire is not counted as a routing success it never claimed.
 
 This costs money and is not deterministic, so it is not a pull request gate. Run
 it when a description changes, and from the `Trigger eval` workflow on demand.
@@ -191,6 +193,22 @@ def score(case: Case, selected: list[str]) -> Result:
     return Result(not missing, not co_fired, "; ".join(detail))
 
 
+def rates(scored: list[tuple[Case, Result]]) -> tuple[int, int, int, int]:
+    """Passes and totals for routing and disjointness, over asserting cases only.
+
+    A case with no `fires` makes no routing claim, and one with no `silent` makes
+    no disjointness claim, so scoring either as a pass measures the corpus rather
+    than the descriptions. Counting every case inflated both rates enough to
+    matter: the no-fire cases alone could carry a run over a 90% threshold that
+    the asserting cases by themselves would have failed.
+    """
+    routed = sum(1 for c, r in scored if c.fires and r.routing_ok)
+    routing_total = sum(1 for c, _ in scored if c.fires)
+    disjoint = sum(1 for c, r in scored if c.silent and r.disjoint_ok)
+    disjoint_total = sum(1 for c, _ in scored if c.silent)
+    return routed, routing_total, disjoint, disjoint_total
+
+
 def catalog_block(catalog: dict[str, str]) -> str:
     return "\n\n".join(f"<skill name={n!r}>\n{d}\n</skill>" for n, d in catalog.items())
 
@@ -218,7 +236,15 @@ def select(client, catalog: dict[str, str], prompt: str, model: str, effort: str
     if response.stop_reason == "refusal":
         raise RuntimeError(f"the model declined to answer: {response.stop_details}")
     text = "".join(b.text for b in response.content if b.type == "text")
-    return parse_selection(text)
+    selected = parse_selection(text)
+
+    # A name that is not in the catalog is not a routing decision, it is a broken
+    # reply. Scoring around it let a run pass on the names that happened to
+    # match: a case expecting silence was satisfied by a skill nobody wrote.
+    unknown = [s for s in selected if s not in catalog]
+    if unknown:
+        raise ValueError(f"the reply names skills not in the catalog: {', '.join(unknown)}")
+    return selected
 
 
 def rate(raw: str) -> float:
@@ -279,32 +305,31 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     client = anthropic.Anthropic()
-    routed = disjoint = 0
-    failures: list[tuple[Case, Result]] = []
+    scored: list[tuple[Case, Result]] = []
 
     for i, case in enumerate(cases, 1):
         try:
             selected = select(client, catalog, case.prompt, args.model, args.effort)
         except Exception as exc:  # one bad call should not lose the whole run
             print(f"FAIL {i:>3}  {case.prompt[:60]!r}\n       - {exc}")
-            failures.append((case, Result(False, False, str(exc))))
+            scored.append((case, Result(False, False, str(exc))))
             continue
 
         result = score(case, selected)
-        routed += result.routing_ok
-        disjoint += result.disjoint_ok
+        scored.append((case, result))
         if result.routing_ok and result.disjoint_ok:
             print(f"ok   {i:>3}  {case.prompt[:60]!r}")
         else:
             print(f"FAIL {i:>3}  {case.prompt[:60]!r}\n       - {result.detail}")
-            failures.append((case, result))
 
-    total = len(cases)
-    routing_rate = routed / total
-    disjoint_rate = disjoint / total
+    routed, routing_total, disjoint, disjoint_total = rates(scored)
+    # No asserting cases means nothing was claimed, so nothing failed.
+    routing_rate = routed / routing_total if routing_total else 1.0
+    disjoint_rate = disjoint / disjoint_total if disjoint_total else 1.0
     print()
-    print(f"routing       {routed}/{total}  ({routing_rate:.0%})")
-    print(f"disjointness  {disjoint}/{total}  ({disjoint_rate:.0%})")
+    print(f"routing       {routed}/{routing_total}  ({routing_rate:.0%})")
+    print(f"disjointness  {disjoint}/{disjoint_total}  ({disjoint_rate:.0%})")
+    print(f"{len(cases)} cases, each scored only where it asserts")
     print(f"model {args.model} at effort {args.effort}")
 
     if routing_rate < args.threshold or disjoint_rate < args.threshold:

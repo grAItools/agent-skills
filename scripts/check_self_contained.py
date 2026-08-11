@@ -28,7 +28,10 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote
 
-FENCE = re.compile(r"^(?P<indent>[ \t]*)(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
+# A fence may be indented by at most three spaces. Four makes it an indented
+# code block holding literal backticks, so treating it as a fence would blank the
+# prose after it — and any real link in that prose would go unchecked.
+FENCE = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<info>.*)$")
 BACKTICKS = re.compile(r"`+")
 
 INLINE_LINK_OPEN = re.compile(r"\]\(")
@@ -38,8 +41,21 @@ HTML_ATTR = re.compile(r"""\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)
 # `\(` in a destination is a literal parenthesis, not a nesting one.
 ESCAPED_PAREN = re.compile(r"\\([()])")
 
+# Whitespace that ends a destination and separates it from an optional title.
+DESTINATION_END = " \t\n"
+
 # A URI scheme: `https://`, but also `mailto:` and any casing of either.
 SCHEME = re.compile(r"\A[A-Za-z][A-Za-z0-9+.\-]*:")
+
+
+def is_escaped(text: str, i: int) -> bool:
+    """Whether the character at `i` is preceded by an odd number of backslashes."""
+    backslashes = 0
+    j = i - 1
+    while j >= 0 and text[j] == "\\":
+        backslashes += 1
+        j -= 1
+    return backslashes % 2 == 1
 
 
 def blank_code_spans(text: str) -> str:
@@ -51,13 +67,17 @@ def blank_code_spans(text: str) -> str:
     to the scanner below, which then failed the skill for quoting it. Runs that
     never find a matching partner are literal backticks, not an opening.
 
+    A backslash-escaped backtick is a literal character and cannot delimit a
+    span: `` \`[x](../other/SKILL.md)\` `` renders as an active link, so pairing
+    those ticks would blank a real cross-folder dependency and let it through.
+
     Newlines survive so the caller can still count lines, and so a span that
     closes on a later line blanks what a Markdown reader would too.
     """
     out = list(text)
     i = 0
     while i < len(text):
-        if text[i] != "`":
+        if text[i] != "`" or is_escaped(text, i):
             i += 1
             continue
         opening = BACKTICKS.match(text, i)
@@ -66,7 +86,7 @@ def blank_code_spans(text: str) -> str:
         closing = None
         j = opening.end()
         while j < len(text):
-            if text[j] != "`":
+            if text[j] != "`" or is_escaped(text, j):
                 j += 1
                 continue
             candidate = BACKTICKS.match(text, j)
@@ -136,22 +156,39 @@ def clean_target(raw: str) -> str | None:
     return unquote(ESCAPED_PAREN.sub(r"\1", target))
 
 
-def inline_link_targets(text: str) -> list[tuple[int, str]]:
-    """Inline-link destinations, read with parentheses counted rather than split on.
+def read_destination(text: str, i: int) -> str | None:
+    """The destination of an inline link whose `](` ends at `i`, or None if unclosed.
 
     Markdown allows balanced parentheses in a destination, so `[x](a_(b).md)`
-    points at `a_(b).md`. Stopping at the first `)` truncated that to `a_(b` and
-    reported a file that is present as missing.
+    points at `a_(b).md` and stopping at the first `)` would report a file that
+    is present as missing. It also allows an optional quoted title after the
+    destination, and parentheses in that title are text rather than nesting:
+    counting them left `[x](../other/SKILL.md "note (")` looking unclosed, and an
+    unclosed link is skipped — so the check silently stopped applying to it.
+
+    The destination therefore ends at the first whitespace or at the parenthesis
+    that closes the one `](` opened, whichever comes first. Everything after it
+    only has to confirm that the link closes at all.
     """
-    found: list[tuple[int, str]] = []
-    for m in INLINE_LINK_OPEN.finditer(text):
-        i = m.end()
-        depth = 1
+    while i < len(text) and text[i] in DESTINATION_END:
+        i += 1
+
+    if i < len(text) and text[i] == "<":
+        end = i + 1
+        while end < len(text) and text[end] != ">":
+            end += 2 if text[end] == "\\" else 1
+        if end >= len(text):
+            return None
+        destination, i = text[i:end + 1], end + 1
+    else:
+        start, depth = i, 1
         while i < len(text):
             ch = text[i]
             if ch == "\\":
                 i += 2  # an escaped parenthesis does not open or close anything
                 continue
+            if ch in DESTINATION_END:
+                break  # a title may follow; the destination is done either way
             if ch == "(":
                 depth += 1
             elif ch == ")":
@@ -159,9 +196,38 @@ def inline_link_targets(text: str) -> list[tuple[int, str]]:
                 if depth == 0:
                     break
             i += 1
-        if depth != 0:
-            continue  # never closed, so not a link
-        found.append((text.count("\n", 0, m.start()) + 1, text[m.end():i]))
+        if i >= len(text):
+            return None  # ran off the end, so this never was a link
+        destination = text[start:i]
+
+    # Past the destination: an optional title, then the closing parenthesis. A
+    # quoted title is stepped over whole so its punctuation counts for nothing.
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\":
+            i += 2
+            continue
+        if ch in "\"'":
+            quote, i = ch, i + 1
+            while i < len(text) and text[i] != quote:
+                i += 2 if text[i] == "\\" else 1
+            if i >= len(text):
+                return None
+            i += 1
+            continue
+        if ch == ")":
+            return destination
+        i += 1
+    return None
+
+
+def inline_link_targets(text: str) -> list[tuple[int, str]]:
+    """Every inline-link destination, with the line its link starts on."""
+    found: list[tuple[int, str]] = []
+    for m in INLINE_LINK_OPEN.finditer(text):
+        destination = read_destination(text, m.end())
+        if destination is not None:
+            found.append((text.count("\n", 0, m.start()) + 1, destination))
     return found
 
 

@@ -53,8 +53,17 @@ MARKETPLACE_REQUIRED = (("name", str), ("owner", (dict, str)), ("plugins", list)
 PLUGIN_OPTIONAL = (("keywords", [str]),)
 ENTRY_OPTIONAL = (("description", str), ("keywords", [str]))
 
-# `x.y.z`, optionally with a prerelease or build suffix.
-SEMVER = re.compile(r"\A\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.\-]+)?\Z")
+# The expression published at semver.org, which is the only thing worth trusting
+# here. The shorter `\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.\-]+)?` this replaces was
+# wrong in both directions: it rejected `2.1.0-rc.1+build.7`, which is valid and
+# carries both a prerelease and build metadata, while accepting `2.1.0-01`, whose
+# leading zero is not.
+SEMVER = re.compile(
+    r"\A(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
+    r"(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)"
+    r"(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?"
+    r"(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?\Z"
+)
 
 # Duplicated verbatim between the two manifests, so they must agree.
 SHARED_FIELDS = ("description", "keywords")
