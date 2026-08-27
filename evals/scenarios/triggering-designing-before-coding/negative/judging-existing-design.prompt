@@ -1,0 +1,6 @@
+---
+allowed: [verifying-changes]
+---
+A contractor wrote docs/payment-design.md for us. Assess whether that design
+holds up — check its module boundaries, contracts, and error story — before we
+approve the build.

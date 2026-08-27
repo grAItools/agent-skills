@@ -1,0 +1,30 @@
+name: _template-scenario-name
+kind: triggering
+skill_under_test: designing-before-coding
+description: >
+  One line describing what this scenario proves. Referenced in reports.
+agents: [claude, opencode, pi, omp]
+status: draft
+timeout_seconds: 600
+max_turns: 30
+
+# kind: triggering
+#   positive/*.prompt  - each file = one prompt that SHOULD fire skill_under_test
+#   negative/*.prompt  - each file = one prompt that must NOT fire it
+#   Prompt frontmatter:
+#     expect: <skill>       (positive cases) which skill must fire
+#     allowed: [<skill>,…]  other skills permitted to fire alongside/besides
+#   reps: how many repetitions per case
+reps: 1
+thresholds:
+  precision: 0.9
+  recall: 0.9
+
+# kind: efficacy
+#   fixture/           - synthetic repo copied into the agent's working directory
+#   task.prompt        - single task prompt (required)
+#   rubric.md          - grading criteria for the judge (required)
+#   checks.yaml        - optional deterministic post-checks
+# arm_reps: 3          # repetitions per arm (baseline and treatment)
+# min_delta: 0.0       # required mean-score improvement for a pass verdict
+# judge_model: ""      # optional judge override; EVALS_JUDGE_MODEL env wins

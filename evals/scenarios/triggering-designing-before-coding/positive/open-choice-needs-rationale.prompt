@@ -1,0 +1,6 @@
+---
+expect: designing-before-coding
+---
+We cannot agree internally whether the job scheduler should push tasks to workers
+or workers should pull from a queue. This structural choice is still open; evaluate
+both options and write up the decision with its rationale so we stop relitigating it.

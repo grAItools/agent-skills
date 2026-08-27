@@ -1,0 +1,15 @@
+name: efficacy-designing-before-coding
+kind: efficacy
+skill_under_test: designing-before-coding
+description: >
+  Does the skill make the agent produce a deliberate, alternatives-compared
+  design document instead of jumping into code?
+agents: [claude, opencode, pi, omp]
+status: ready
+arm_reps: 3
+min_delta: 0.5
+timeout_seconds: 900
+max_turns: 40
+task_prompt: task.prompt
+rubric: rubric.md
+checks: checks.yaml

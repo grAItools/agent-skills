@@ -58,7 +58,17 @@ discovers skills. For example:
 To take everything at once, copy the contents of `skills/` into your agent's skills
 directory. Manually copied skills keep their plain names (no `graitools:` prefix).
 
+## Evaluating the skills
+
+The collection is behaviorally tested, not just linted: [`evals/`](evals/) runs
+real coding-agent CLIs (Claude Code, OpenCode, pi, omp) against scenario
+fixtures to measure whether each skill fires in the right situations, improves
+the work versus running without it, and respects context budgets. Start with
+[evals/README.md](evals/README.md), or run `scripts/check-evals.sh` for the
+free static gate.
+
 ## Contributing
 
 New skills are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the format
-requirements and quality bar.
+requirements, quality bar, and what a new skill ships with (including an
+evaluation scenario).

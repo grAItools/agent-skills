@@ -1,0 +1,6 @@
+---
+allowed: [refactoring-continuously]
+---
+Every small feature change touches fifteen files in core/ordering and it keeps
+breaking in new places. Restructure that area so changes stop fanning out,
+without changing behavior.

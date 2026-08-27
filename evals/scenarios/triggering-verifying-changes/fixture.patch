@@ -1,0 +1,63 @@
+diff --git a/src/reporting.py b/src/reporting.py
+index 1728423..990b673 100644
+--- a/src/reporting.py
++++ b/src/reporting.py
+@@ -5,3 +5,13 @@ def summarize(rows: list[dict]) -> tuple[int, float]:
+     """Return (count, total) over the numeric ``value`` field of each row."""
+     values = [row["value"] for row in rows]
+     return len(values), sum(values)
++
++
++def render_page(
++    rows: list[dict] | None, page: int, per_page: int = 10
++) -> tuple[list[dict], int]:
++    """Return one 1-based page of rows and the total number of pages."""
++    rows = [] if rows is None else rows
++    pages = -(-len(rows) // per_page)
++    start = (max(page, 1) - 1) * per_page
++    return rows[start:start + per_page], pages
+diff --git a/tests/test_reporting.py b/tests/test_reporting.py
+index e81cc4b..7bbe1d4 100644
+--- a/tests/test_reporting.py
++++ b/tests/test_reporting.py
+@@ -1,6 +1,6 @@
+ import unittest
+ 
+-from src.reporting import summarize
++from src.reporting import render_page, summarize
+ 
+ 
+ class SummarizeTest(unittest.TestCase):
+@@ -11,5 +11,32 @@ class SummarizeTest(unittest.TestCase):
+         self.assertEqual(summarize([]), (0, 0))
+ 
+ 
++class RenderPageTest(unittest.TestCase):
++    def test_first_page_of_three(self):
++        rows = [{"id": i} for i in range(25)]
++        page_rows, pages = render_page(rows, 1)
++        self.assertEqual(pages, 3)
++        self.assertEqual(len(page_rows), 10)
++
++    def test_last_partial_page(self):
++        rows = [{"id": i} for i in range(25)]
++        page_rows, pages = render_page(rows, 3)
++        self.assertEqual((len(page_rows), pages), (5, 3))
++
++    def test_none_rows(self):
++        self.assertEqual(render_page(None, 1), ([], 0))
++
++    def test_empty_rows_report_zero_pages(self):
++        self.assertEqual(render_page([], 1), ([], 0))
++
++    def test_out_of_range_page_is_empty(self):
++        self.assertEqual(render_page([{"id": 1}], 9), ([], 1))
++
++    def test_non_positive_page_clamps_to_first(self):
++        rows = [{"id": i} for i in range(15)]
++        page_rows, pages = render_page(rows, 0)
++        self.assertEqual((len(page_rows), pages), (10, 2))
++
++
+ if __name__ == "__main__":
+     unittest.main()

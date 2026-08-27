@@ -1,0 +1,7 @@
+---
+expect: designing-before-coding
+---
+The team has signed off on REQUIREMENTS.md in this repo for the bulk-export feature.
+Before anyone writes code, produce the technical design: module boundaries,
+interfaces, data model, error behavior, and an implementation plan good enough to
+hand to another engineer.

@@ -1,0 +1,2 @@
+A customer reported the issue described in BUG_REPORT.md. Fix it, and make sure
+the fix is solid enough to ship — this module does money math.

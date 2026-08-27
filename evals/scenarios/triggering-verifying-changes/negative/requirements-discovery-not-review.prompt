@@ -1,0 +1,6 @@
+---
+allowed: [discovering-requirements]
+---
+Stakeholders just said "make search better" and walked out. Nobody knows what
+they actually meant. Figure out the real need behind this request before we do
+anything else.

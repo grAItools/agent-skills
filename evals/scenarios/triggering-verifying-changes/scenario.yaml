@@ -1,0 +1,14 @@
+name: triggering-verifying-changes
+kind: triggering
+skill_under_test: verifying-changes
+description: >
+  Fires when finished work, diffs, or designs need judgment before shipping;
+  stays silent when the ask is to write/fix code, design something new,
+  refactor, or elicit requirements.
+agents: [claude, opencode, pi, omp]
+status: ready
+reps: 1
+timeout_seconds: 600
+thresholds:
+  precision: 0.9
+  recall: 0.9

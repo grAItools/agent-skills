@@ -1,0 +1,5 @@
+---
+allowed: [designing-before-coding]
+---
+Before we start the notifications work, produce the technical design and
+implementation plan from the agreed requirements in docs/notify-requirements.md.

@@ -1,0 +1,5 @@
+---
+allowed: []
+---
+Add a phone field to the User model the same way the address field is done, and
+expose it in GET /users. Straightforward addition that fits the existing pattern.

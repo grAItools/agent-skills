@@ -1,0 +1,7 @@
+---
+expect: designing-before-coding
+---
+We have three nearly identical exporter classes that were copy-pasted per format.
+A fourth format lands next sprint. Design the right abstraction for exporters and
+how the existing three should move onto it — this needs a proper structural
+decision, not another bolt-on.

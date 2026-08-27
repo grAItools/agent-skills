@@ -1,0 +1,85 @@
+name: Live skills evaluation
+#
+# Trusted-maintainer operation. This workflow launches real coding-agent CLIs in
+# permissive modes against synthetic fixture repositories, billed to the
+# configured provider accounts. It never runs on pull requests; results are
+# uploaded as artifacts and nothing here gates merges.
+#
+# Prerequisites:
+#   - repository secrets: ANTHROPIC_API_KEY (claude + judge), and where used:
+#     OPENCODE_* auth is read from your machine only — for CI use provider API
+#     keys via EVALS_OPENCODE_MODEL plus opencode's auth seeding (see
+#     evals/README.md). pi/omp honor ANTHROPIC_API_KEY directly.
+#
+# Usage: Actions → Live skills evaluation → Run workflow
+#        scenario: blank = all ready scenarios
+#        agents:   comma-separated subset of claude,opencode,pi,omp
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Scenario name (blank = all ready scenarios)"
+        required: false
+        default: ""
+      agents:
+        description: "Comma-separated agents (blank = all with adapters)"
+        required: false
+        default: "claude"
+      judge_model:
+        description: "Judge model id for efficacy scenarios"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Install agent CLIs (node-based)
+        run: |
+          npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+          npm install -g opencode-ai
+
+      - name: Validate scenarios before spending money
+        run: scripts/check-evals.sh
+
+      - name: Run evaluation batch
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EVALS_JUDGE_MODEL: ${{ inputs.judge_model }}
+        run: |
+          args=()
+          if [ -n "${{ inputs.scenario }}" ]; then
+            args+=(--scenario "${{ inputs.scenario }}")
+          else
+            args+=(--all-ready)
+          fi
+          if [ -n "${{ inputs.agents }}" ]; then
+            IFS=',' read -ra agents <<< "${{ inputs.agents }}"
+            for agent in "${agents[@]}"; do
+              args+=(--agent "$agent")
+            done
+          fi
+          # Continue past failing cells so one bad cell does not hide the rest;
+          # the exit code still reflects the worst verdict.
+          set +e
+          uv run --project evals evals run "${args[@]}"
+          code=$?
+          set -e
+          exit $code
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results-${{ github.run_id }}
+          path: evals/results/
+          retention-days: 30

@@ -1,0 +1,6 @@
+checks:
+  - type: file_exists
+    glob: "docs/**/*.md"
+  - type: file_contains
+    glob: "docs/**/*.md"
+    pattern: "(?i)alternativ"

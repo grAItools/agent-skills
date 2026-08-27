@@ -1,0 +1,15 @@
+name: efficacy-verifying-changes
+kind: efficacy
+skill_under_test: verifying-changes
+description: >
+  Does the review skill make the agent treat "tests pass" as insufficient —
+  hunting boundaries, adding a regression test, and explaining root cause?
+agents: [claude, opencode, pi, omp]
+status: ready
+arm_reps: 3
+min_delta: 0.5
+timeout_seconds: 900
+max_turns: 40
+task_prompt: task.prompt
+rubric: rubric.md
+checks: checks.yaml

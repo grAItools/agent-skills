@@ -1,0 +1,6 @@
+---
+expect: verifying-changes
+---
+The branch review/pr-142 is checked out. Review this change critically —
+correctness, edge cases, whether the tests really cover it — and report by
+severity whether it is ready to merge.

@@ -95,9 +95,13 @@ describing the wrong situation.
 
    ```bash
    scripts/check.sh
+   scripts/check-evals.sh
    ```
 
-4. Open a pull request describing the concrete situations the skill is for, and
+4. Add a triggering scenario under `evals/scenarios/` (see
+   [evals/README.md](evals/README.md)) covering the boundary you drew in the
+   description.
+5. Open a pull request describing the concrete situations the skill is for, and
    say which existing triggers you checked yours against.
 
 ## Checking your work
@@ -122,6 +126,28 @@ What no validator here can tell you is whether a trigger is drawn in the right
 place. Two skills whose descriptions both match a routine coding task will both
 load, and a substring check cannot notice — that is the thing to argue about in
 review, using the three-part shape above.
+
+## Evaluating skills
+
+Review argues about triggers; measurement settles them. `evals/` contains a
+harness that runs real coding-agent CLIs against small scenario fixtures and
+grades four things: whether the skill fires when it should, whether it stays
+silent when it shouldn't (including co-firing with its neighbours), whether it
+measurably improves the work compared with running without skills, and what it
+costs in context tokens. The mechanics live in
+[evals/README.md](evals/README.md); the short version:
+
+```bash
+scripts/check-evals.sh                                   # free, runs in CI
+uv run --project evals evals run --scenario <name> \
+    --agent claude --case <case>                         # one billed cell
+```
+
+A new skill should ship with at least one triggering scenario (a few positive
+and negative cases aimed at its boundary with each neighbouring skill); changes
+to an existing skill's description should re-run that skill's scenarios. The
+static gate catches structural faults for free; the live cells cost money and
+run locally or via the manual workflow, never automatically on pull requests.
 
 ## Packaging
 

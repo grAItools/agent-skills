@@ -1,0 +1,6 @@
+---
+allowed: [discovering-requirements]
+---
+People keep asking for a "dashboard" but nobody can say what decisions it should
+support or who it is for. Before we design or build anything, help us pin down
+what we are actually being asked for.

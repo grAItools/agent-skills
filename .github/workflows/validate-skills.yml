@@ -22,3 +22,9 @@ jobs:
       # validators are pinned inside it rather than in this file.
       - name: Validate skills
         run: scripts/check.sh
+
+      # Static evaluation-asset gate: scenario structure and skill context
+      # budgets. No API keys or agent CLIs are involved; live evaluations are a
+      # separate trusted workflow (evals-live.yml).
+      - name: Validate eval scenarios
+        run: scripts/check-evals.sh

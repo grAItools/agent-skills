@@ -1,0 +1,5 @@
+---
+allowed: [implementing-strategically]
+---
+Your earlier review found the null-handling bug in this patch. Go ahead and fix
+it on this branch now, keeping the change small and tested.

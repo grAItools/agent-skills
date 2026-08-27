@@ -1,0 +1,6 @@
+---
+expect: designing-before-coding
+---
+Adding multi-region support breaks our single-database assumption all over the
+storage layer. Work out how the layer's structure has to change and record the
+alternatives you considered and why you chose one.

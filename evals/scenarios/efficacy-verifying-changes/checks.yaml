@@ -1,0 +1,7 @@
+checks:
+  - type: command_succeeds
+    command: bash check_suite.sh
+    timeout_seconds: 180
+  - type: file_contains
+    glob: "tests/**/*.py"
+    pattern: "(?i)(150|percent.*(100|boundar|negativ)|>\\s*100)"

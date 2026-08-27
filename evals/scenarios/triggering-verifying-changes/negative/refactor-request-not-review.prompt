@@ -1,0 +1,5 @@
+---
+allowed: [refactoring-continuously]
+---
+This module fights every change we make. Restructure it in behavior-preserving
+steps so future work stops breaking here.

@@ -1,0 +1,6 @@
+---
+expect: verifying-changes
+---
+Check the implementation in src/reporting against SPEC.md section by section.
+For every requirement, state whether the code satisfies it, and write up a
+review report with any gaps.

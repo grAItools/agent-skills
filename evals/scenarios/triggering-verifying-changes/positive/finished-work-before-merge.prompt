@@ -1,0 +1,6 @@
+---
+expect: verifying-changes
+---
+I finished the pagination feature and all tests pass. Before I open the PR,
+review the complete diff in the working tree against what was actually asked
+for, and give me a written verdict.

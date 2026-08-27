@@ -1,0 +1,13 @@
+name: triggering-designing-before-coding
+kind: triggering
+skill_under_test: designing-before-coding
+description: >
+  Fires on agreed-requirement design work and new abstractions; stays silent on
+  trivial bolt-on changes, requirement elicitation, design review, and refactoring.
+agents: [claude, opencode, pi, omp]
+status: ready
+reps: 1
+timeout_seconds: 600
+thresholds:
+  precision: 0.9
+  recall: 0.9

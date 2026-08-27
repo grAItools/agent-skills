@@ -1,0 +1,4 @@
+REQUIREMENTS.md captures the agreed requirements for the CSV export feature on
+this project. Produce the technical design and implementation plan before
+writing any production code, and store the design document where this project
+keeps such documents (create a conventional location if none exists).

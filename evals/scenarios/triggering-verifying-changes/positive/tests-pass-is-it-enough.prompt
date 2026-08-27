@@ -1,0 +1,6 @@
+---
+expect: verifying-changes
+---
+CI is green and the unit tests pass. Is that enough to ship this change? Go over
+the diff skeptically, judge whether the tests are adequate, and tell me what
+could still be wrong despite the green build.
