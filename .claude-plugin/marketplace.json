@@ -6,7 +6,7 @@
   },
   "description": "grAItools agent skills as an installable Claude Code plugin.",
   "metadata": {
-    "version": "2.0.0",
+    "version": "2.1.0",
     "description": "Development-cycle agent skills: discover, design, implement, verify, deliver — wrapped in continuous refactoring."
   },
   "plugins": [

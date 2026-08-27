@@ -1,6 +1,6 @@
 ---
 name: refactoring-continuously
-description: Restructures existing code without changing its behavior, in small steps verified by passing tests, to pay down design debt as it is found. Use when a change fans out into edits disproportionate to the requirement, when the same area keeps breaking or keeps resisting new requirements, when an area has become one everyone is afraid to touch, or when code is tidy but its vocabulary no longer matches how the domain is discussed. Do not use as routine cleanup on every edit, as cosmetic modernization, or immediately before a release; book it as a tracked task instead.
+description: Restructures existing code without changing its behavior, in small steps verified by passing tests, to pay down design debt as it is found. Use when a change fans out into edits disproportionate to the requirement while the behavior it delivers stays the same, when the same area keeps breaking or keeps resisting new requirements, when an area has become one everyone is afraid to touch, or when code is tidy but its vocabulary no longer matches how the domain is discussed. Do not use as routine cleanup on every edit, as cosmetic modernization, immediately before a release, or to design support for brand-new behavior before any restructuring starts — book that design work with a design skill first.
 license: MIT
 ---
 
